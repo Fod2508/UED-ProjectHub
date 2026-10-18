@@ -1,0 +1,6 @@
+{
+  "name": "UD-DN ProjectHub - Quản lý Đồ án Môn học",
+  "description": "Hệ thống Quản lý Đồ án Môn học - Khoa CNTT, Trường Đại học Sư phạm, ĐHĐN. Tự động ghép nhóm bù trừ kỹ năng, Kanban tiến độ và đánh giá chéo chống free-rider.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
