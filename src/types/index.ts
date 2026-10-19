@@ -1,13 +1,31 @@
-export type UserRole = 'student' | 'lecturer';
+export type UserRole = "student" | "lecturer";
 
 export type ScreenType =
-  | 'landing'
-  | 'dashboard'
-  | 'matchmaking'
-  | 'kanban'
-  | 'milestones'
-  | 'peer_review'
-  | 'report';
+  | "landing"
+  | "login"
+  | "dashboard"
+  | "matchmaking"
+  | "kanban"
+  | "milestones"
+  | "peer_review"
+  | "report";
+
+export type DemoPersona = "lecturer" | "leader" | "member";
+
+export interface ClassGroupSummary {
+  id: string;
+  name: string;
+  topic: string;
+  leaderName: string;
+  leaderAvatar: string;
+  leaderEmail: string;
+  memberCount: number;
+  maxMembers: number;
+  status: "Đủ thành viên" | "Đang tuyển thành viên";
+  missingSkills?: string[];
+  members: { name: string; role: string; avatar: string }[];
+  kanbanProgress: number; // %
+}
 
 export interface UserProfile {
   id: string;
@@ -19,10 +37,11 @@ export interface UserProfile {
   avatarText: string;
   teamId?: string;
   teamName?: string;
+  isGroupLeader?: boolean; // Trưởng nhóm có quyền duyệt applicants và tasks
 }
 
-export type DayOfWeek = 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'CN';
-export type TimeSlot = 'Sáng' | 'Chiều' | 'Tối';
+export type DayOfWeek = "T2" | "T3" | "T4" | "T5" | "T6" | "T7" | "CN";
+export type TimeSlot = "Sáng" | "Chiều" | "Tối";
 
 export interface FreeScheduleMatrix {
   [day: string]: {
@@ -44,11 +63,17 @@ export interface CandidateApplicant {
   timeScore: number;
   matchScore: number; // FinalScore
   isTopRecommendation: boolean;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: "pending" | "accepted" | "rejected";
   appliedAt: string;
 }
 
-export type TaskStatus = 'Mới tạo' | 'Đã giao việc' | 'Đang thực hiện' | 'Chờ duyệt' | 'Hoàn thành';
+export type TaskStatus =
+  | "Mới tạo"
+  | "Đã giao việc"
+  | "Đang thực hiện"
+  | "Chờ duyệt"
+  | "Hoàn thành"
+  | "Quá hạn";
 
 export interface KanbanTask {
   id: string;
@@ -56,7 +81,7 @@ export interface KanbanTask {
   title: string;
   description?: string;
   tag: string;
-  priority?: 'Thường' | 'Ưu tiên Cao' | 'Khẩn cấp';
+  priority?: "Thường" | "Ưu tiên Cao" | "Khẩn cấp";
   dueDate: string; // "17/12/2026" or "Hôm nay"
   assigneeName: string;
   assigneeAvatar: string;
@@ -75,7 +100,11 @@ export interface Milestone {
   deliverables: string;
   dueDate: string;
   weight: number; // percentage
-  status: 'Đã hoàn thành' | 'Đang mở (Nước rút)' | 'Chưa mở' | 'Đã khóa';
+  status: "Đã hoàn thành" | "Đang mở (Nước rút)" | "Chưa mở" | "Đã khóa";
+  type?: "course" | "internal";
+  teamId?: string;
+  teamName?: string;
+  createdBy?: string;
 }
 
 export interface PeerEvaluationInput {
@@ -99,7 +128,7 @@ export interface MemberContributionData {
   hasOverdueTask: boolean;
   peerScoreAvg: number; // e.g. 4.8, 4.5, 3.8, 2.1
   contributionScore: number; // Calculated via (completionRate*0.5) + (peerScoreAvg/5*100*0.5)
-  status: 'Đóng góp tích cực' | 'Đạt chuẩn' | 'Cảnh báo thiếu đóng góp';
+  status: "Đóng góp tích cực" | "Đạt chuẩn" | "Cảnh báo thiếu đóng góp";
   isWarning: boolean;
   warningReason?: string;
 }
@@ -115,7 +144,36 @@ export interface GroupReportData {
   submissionProgress: string; // "100%"
   peerReviewProgress: string; // "100% hoàn thành"
   warningCount: number;
-  status: 'Chờ giảng viên phê duyệt' | 'Đã phê duyệt' | 'Yêu cầu giải trình' | 'Yêu cầu đánh giá lại';
+  status:
+    | "Chờ giảng viên phê duyệt"
+    | "Đã phê duyệt"
+    | "Yêu cầu giải trình"
+    | "Yêu cầu đánh giá lại";
   lecturerInstruction: string;
   members: MemberContributionData[];
+}
+
+export type NotificationType =
+  | "team_request"
+  | "team_approved"
+  | "team_rejected"
+  | "milestone_published"
+  | "task_assigned"
+  | "task_overdue"
+  | "peer_review_open"
+  | "peer_review_reminder"
+  | "report_ready"
+  | "report_revision"
+  | "report_approved";
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  createdAt: string;
+  timestamp: number;
+  read: boolean;
+  targetScreen?: ScreenType;
+  recipientRole?: UserRole | "all";
 }

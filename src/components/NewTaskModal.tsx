@@ -1,18 +1,44 @@
-import React, { useState } from 'react';
-import { useApp } from '../context/AppContext.tsx';
-import { TaskStatus } from '../types/index.ts';
-import { X, Plus, Calendar, Tag, User } from 'lucide-react';
+import React, { useState } from "react";
+import { useApp } from "../context/AppContext.tsx";
+import { TaskStatus } from "../types/index.ts";
+import { X, Plus, Calendar, Tag, User } from "lucide-react";
 
 export const NewTaskModal: React.FC = () => {
-  const { isNewTaskModalOpen, setIsNewTaskModalOpen, addTask } = useApp();
+  const {
+    isNewTaskModalOpen,
+    setIsNewTaskModalOpen,
+    addTask,
+    milestones,
+    currentUser,
+    showToast,
+  } = useApp();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [tag, setTag] = useState('Frontend');
-  const [priority, setPriority] = useState<'Thường' | 'Ưu tiên Cao' | 'Khẩn cấp'>('Thường');
-  const [status, setStatus] = useState<TaskStatus>('Mới tạo');
-  const [dueDate, setDueDate] = useState('24/12/2026');
-  const [assignee, setAssignee] = useState({ name: 'Nguyễn Văn A', avatar: 'NA' });
+  // Find relevant milestones (course milestones + internal ones belonging to this team)
+  const availableMilestones = milestones.filter(
+    (m) =>
+      m.type !== "internal" ||
+      !m.teamId ||
+      m.teamId === currentUser?.teamId,
+  );
+
+  const activeMilestone =
+    availableMilestones.find((m) => m.status === "Đang mở (Nước rút)") ||
+    availableMilestones[0];
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [tag, setTag] = useState("Frontend");
+  const [priority, setPriority] = useState<
+    "Thường" | "Ưu tiên Cao" | "Khẩn cấp"
+  >("Thường");
+  const [status, setStatus] = useState<TaskStatus>("Mới tạo");
+  const [dueDate, setDueDate] = useState("2026-12-24"); // yyyy-mm-dd for native date input
+  const [milestoneId, setMilestoneId] = useState(activeMilestone?.id || "m2");
+
+  const [assignee, setAssignee] = useState({
+    name: currentUser?.name || "Nguyễn Văn A",
+    avatar: currentUser?.avatarText || "NA",
+  });
 
   if (!isNewTaskModalOpen) return null;
 
@@ -20,30 +46,47 @@ export const NewTaskModal: React.FC = () => {
     e.preventDefault();
     if (!title.trim()) return;
 
+    if (!currentUser?.teamId) {
+      showToast("Bạn chưa tham gia nhóm nào để tạo task.", "warning");
+      return;
+    }
+
+    // Convert yyyy-mm-dd (native date input) to dd/mm/yyyy used throughout the app
+    const [y, m, d] = dueDate.split("-");
+    const formattedDueDate = dueDate ? `${d}/${m}/${y}` : "";
+
     addTask({
       title: title.trim(),
       description: description.trim(),
       tag,
       priority,
       status,
-      dueDate,
+      dueDate: formattedDueDate,
       assigneeName: assignee.name,
       assigneeAvatar: assignee.avatar,
-      milestoneId: 'm2'
+      milestoneId: milestoneId || activeMilestone?.id || "m2",
     });
 
-    setTitle('');
-    setDescription('');
+    setTitle("");
+    setDescription("");
     setIsNewTaskModalOpen(false);
   };
 
-  const membersList = [
-    { name: 'Nguyễn Văn A', avatar: 'NA' },
-    { name: 'Trần Thu Hà', avatar: 'TH' },
-    { name: 'Đặng Minh', avatar: 'DM' },
-    { name: 'Lê Văn Cúc', avatar: 'LC' },
-    { name: 'Chưa giao', avatar: '?' }
+  const defaultMembers = [
+    {
+      name: currentUser?.name || "Nguyễn Văn A",
+      avatar: currentUser?.avatarText || "NA",
+    },
+    { name: "Trần Thu Hà", avatar: "TH" },
+    { name: "Đặng Minh", avatar: "DM" },
+    { name: "Lê Văn Cúc", avatar: "LC" },
+    { name: "Chưa giao", avatar: "?" },
   ];
+
+  // Unique members list
+  const membersList = defaultMembers.filter(
+    (mem, index, self) => index === self.findIndex((m) => m.name === mem.name),
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -54,7 +97,9 @@ export const NewTaskModal: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
               <Plus className="w-4 h-4" />
             </div>
-            <h3 className="font-bold text-slate-900 text-base">Tạo tác vụ mới</h3>
+            <h3 className="font-bold text-slate-900 text-base">
+              Tạo tác vụ mới
+            </h3>
           </div>
           <button
             onClick={() => setIsNewTaskModalOpen(false)}
@@ -91,6 +136,28 @@ export const NewTaskModal: React.FC = () => {
               placeholder="Yêu cầu kỹ thuật, tài liệu tham khảo..."
               className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
             />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1">
+              Thuộc Cột mốc nộp bài (Milestone / Sprint) <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={milestoneId}
+              onChange={(e) => setMilestoneId(e.target.value)}
+              className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none bg-white font-medium text-slate-800"
+            >
+              {availableMilestones.length === 0 ? (
+                <option value="m2">Cột mốc 2 (Mặc định)</option>
+              ) : (
+                availableMilestones.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.type === "internal" ? "🏷️ [Nội bộ nhóm] " : "📌 [Học phần] "}
+                    {m.name} — Hạn: {m.dueDate} ({m.status})
+                  </option>
+                ))
+              )}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -137,7 +204,9 @@ export const NewTaskModal: React.FC = () => {
               <select
                 value={assignee.name}
                 onChange={(e) => {
-                  const m = membersList.find((item) => item.name === e.target.value);
+                  const m = membersList.find(
+                    (item) => item.name === e.target.value,
+                  );
                   if (m) setAssignee(m);
                 }}
                 className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none bg-white"
@@ -152,13 +221,13 @@ export const NewTaskModal: React.FC = () => {
 
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">
-                Hạn hoàn thành (dd/mm/yyyy)
+                Hạn hoàn thành
               </label>
               <input
-                type="text"
+                type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                placeholder="24/12/2026"
+                min={new Date().toISOString().split("T")[0]}
                 className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
               />
             </div>

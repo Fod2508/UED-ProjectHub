@@ -1,5 +1,6 @@
-import React from 'react';
-import { useApp } from '../context/AppContext.tsx';
+import React from "react";
+import { useApp } from "../context/AppContext.tsx";
+import { NotificationDropdown } from "./NotificationDropdown.tsx";
 import {
   Bell,
   HelpCircle,
@@ -7,24 +8,64 @@ import {
   RotateCcw,
   UserCheck,
   Calendar,
-  ShieldCheck
-} from 'lucide-react';
+  ShieldCheck,
+  LogOut,
+  LogIn,
+  Crown,
+  User,
+} from "lucide-react";
 
 interface NavbarProps {
   onToggleMobileMenu: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
-  const { currentScreen, currentRole, switchRole, resetToDemoData } = useApp();
+  const {
+    currentScreen,
+    setCurrentScreen,
+    currentRole,
+    currentUser,
+    demoPersona,
+    switchDemoPersona,
+    resetToDemoData,
+    logout,
+    unreadNotificationCount,
+    isNotificationOpen,
+    setIsNotificationOpen,
+  } = useApp();
+
+  const isLeader = currentUser?.isGroupLeader ?? false;
+  const isLecturer = currentRole === "lecturer";
+
+  // Check if current user is an authenticated Firebase user (not one of the 3 built-in demo users)
+  const isDemoAccount =
+    !currentUser ||
+    currentUser.id === "user_student_1" ||
+    currentUser.id === "user_student_2" ||
+    currentUser.id === "user_lecturer_1";
 
   const screenTitles: Record<string, string> = {
-    landing: 'Trang chủ Hệ thống',
-    dashboard: 'Tổng quan Đồ án Nhóm 04',
-    matchmaking: 'Ghép nhóm & Duyệt thành viên (SCR_01)',
-    kanban: 'Bảng tiến độ công việc Kanban (SCR_03)',
-    milestones: 'Cấu hình Đề cương & Cột mốc nộp bài (SCR_04)',
-    peer_review: 'Đánh giá chéo Cột mốc 2 (SCR_05)',
-    report: 'Báo cáo mức độ đóng góp & Cảnh báo (SCR_06)'
+    landing: "Trang chủ Hệ thống",
+    dashboard: isLecturer
+      ? "Tổng quan Đồ án Môn học (Giảng viên)"
+      : "Tổng quan Đồ án Nhóm (Sinh viên)",
+    matchmaking: isLecturer
+      ? "Quản lý Danh mục Nhóm & Đề tài (SCR_01)"
+      : isLeader
+      ? "Quản lý Nhóm & Duyệt thành viên (SCR_01)"
+      : "Tìm nhóm & Ghép đôi thông minh (SCR_01)",
+    kanban: isLecturer
+      ? "Giám sát Tiến độ Kanban các Nhóm (SCR_03)"
+      : "Bảng tiến độ công việc Kanban (SCR_03)",
+    milestones: isLecturer
+      ? "Cấu hình Đề cương & Cột mốc nộp bài (SCR_04)"
+      : "Lịch nộp bài học phần & Sprint nội bộ (SCR_04)",
+    peer_review: isLecturer
+      ? "Bảng Quản lý Phiên Đánh giá chéo (SCR_05)"
+      : "Đánh giá chéo Thành viên Cột mốc 2 (SCR_05)",
+    report: isLecturer
+      ? "Báo cáo Đóng góp & Thẩm định Cảnh báo (SCR_06)"
+      : "Điểm đóng góp cá nhân & Minh bạch ẩn danh (SCR_06)",
   };
 
   return (
@@ -50,7 +91,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
           </div>
           <span className="text-slate-300">/</span>
           <span className="font-semibold text-slate-900 truncate max-w-xs md:max-w-md">
-            {screenTitles[currentScreen] || 'ProjectHub'}
+            {screenTitles[currentScreen] || "ProjectHub"}
           </span>
         </div>
       </div>
@@ -61,50 +102,108 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
         <button
           onClick={resetToDemoData}
           title="Khôi phục dữ liệu mẫu ban đầu để thử nghiệm lại"
-          className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-800 text-xs font-medium transition"
+          className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-800 text-xs font-medium transition"
         >
           <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
           <span>Reset Demo</span>
         </button>
 
-        {/* ROLE SWITCHER */}
-        <div className="flex items-center p-1 bg-slate-100 rounded-lg border border-slate-200 text-xs font-medium">
-          <button
-            onClick={() => switchRole('student')}
-            className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 ${
-              currentRole === 'student'
-                ? 'bg-white text-blue-700 shadow-xs font-semibold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <UserCheck className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Sinh viên:</span>
-            <span>Nguyễn Văn A</span>
-          </button>
-          <button
-            onClick={() => switchRole('lecturer')}
-            className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 ${
-              currentRole === 'lecturer'
-                ? 'bg-blue-600 text-white shadow-xs font-semibold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Giảng viên:</span>
-            <span>TS. Trần Văn B</span>
-          </button>
-        </div>
+        {/* ROLE SELECTOR / BADGE */}
+        {isDemoAccount ? (
+          /* Demo Mode Switcher: 3 Clear Personas */
+          <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-medium">
+            <button
+              onClick={() => switchDemoPersona("lecturer")}
+              title="Chuyển sang vai trò Giảng viên (TS. Trần Văn B)"
+              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                demoPersona === "lecturer"
+                  ? "bg-indigo-600 text-white shadow-xs font-semibold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Giảng viên</span>
+            </button>
+
+            <button
+              onClick={() => switchDemoPersona("leader")}
+              title="Chuyển sang vai trò Sinh viên - Trưởng nhóm (Nguyễn Văn A)"
+              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                demoPersona === "leader"
+                  ? "bg-emerald-600 text-white shadow-xs font-semibold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Crown className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Trưởng nhóm</span>
+            </button>
+
+            <button
+              onClick={() => switchDemoPersona("member")}
+              title="Chuyển sang vai trò Sinh viên - Thành viên (Lê Văn Cúc)"
+              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                demoPersona === "member"
+                  ? "bg-blue-600 text-white shadow-xs font-semibold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Thành viên</span>
+            </button>
+          </div>
+        ) : (
+          /* Authenticated User Role Badge */
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold ${
+                isLecturer
+                  ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                  : isLeader
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "bg-blue-50 text-blue-700 border border-blue-200"
+              }`}
+            >
+              {isLecturer ? (
+                <ShieldCheck className="w-3.5 h-3.5" />
+              ) : isLeader ? (
+                <Crown className="w-3.5 h-3.5" />
+              ) : (
+                <UserCheck className="w-3.5 h-3.5" />
+              )}
+              <span>
+                {isLecturer
+                  ? "Giảng viên"
+                  : isLeader
+                  ? "Trưởng nhóm"
+                  : "Thành viên"}
+              </span>
+            </span>
+          </div>
+        )}
 
         {/* Icons */}
         <div className="flex items-center gap-1">
           <div className="relative">
             <button
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition"
+              onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition cursor-pointer relative ${
+                isNotificationOpen
+                  ? "bg-blue-50 text-blue-600"
+                  : "text-slate-500 hover:bg-slate-100"
+              }`}
               aria-label="Thông báo"
+              title="Xem thông báo"
             >
               <Bell className="w-4 h-4" />
+              {unreadNotificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white animate-pulse">
+                  {unreadNotificationCount > 9 ? "9+" : unreadNotificationCount}
+                </span>
+              )}
             </button>
-            <span className="absolute 1 top-1 right-1 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
+
+            {/* Notification Dropdown Menu */}
+            <NotificationDropdown />
           </div>
           <button
             className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition hidden sm:flex"
@@ -114,23 +213,52 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
           </button>
         </div>
 
-        {/* Profile Avatar */}
+        {/* Profile Avatar & Auth Action */}
         <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-              currentRole === 'student' ? 'bg-blue-600' : 'bg-indigo-700'
+              currentRole === "student" ? "bg-blue-600" : "bg-indigo-700"
             }`}
           >
-            {currentRole === 'student' ? 'A' : 'TB'}
+            {currentUser?.avatarText ||
+              (currentRole === "student" ? "A" : "TB")}
           </div>
           <div className="hidden lg:flex flex-col text-left">
             <span className="text-xs font-bold text-slate-900 leading-tight">
-              {currentRole === 'student' ? 'Nguyễn Văn A' : 'TS. Trần Văn B'}
+              {currentUser?.name ||
+                (currentRole === "student" ? "Nguyễn Văn A (Demo)" : "TS. Trần Văn B (Demo)")}
             </span>
             <span className="text-[10px] text-slate-400 leading-tight">
-              {currentRole === 'student' ? 'Trưởng nhóm (Nhóm 04)' : 'Giảng viên hướng dẫn'}
+              {currentUser?.title ||
+                (currentUser
+                  ? (currentRole === "student" ? "Sinh viên" : "Giảng viên")
+                  : (currentRole === "student" ? "Chế độ Demo" : "Chế độ Demo"))}
             </span>
           </div>
+
+          {currentUser ? (
+            /* Logout Button - When user is logged in */
+            <button
+              onClick={logout}
+              className="ml-2 px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-slate-600 hover:bg-red-50 hover:text-red-600 border border-slate-200 hover:border-red-200 transition text-xs font-medium cursor-pointer"
+              aria-label="Đăng xuất"
+              title="Đăng xuất khỏi tài khoản"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Đăng xuất</span>
+            </button>
+          ) : (
+            /* Login Button - When in demo / unauthenticated */
+            <button
+              onClick={() => setCurrentScreen("login")}
+              className="ml-2 px-3 py-1.5 rounded-lg flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white transition text-xs font-semibold shadow-xs cursor-pointer"
+              aria-label="Đăng nhập"
+              title="Đăng nhập với tài khoản của bạn"
+            >
+              <LogIn className="w-4 h-4" />
+              <span className="hidden sm:inline">Đăng nhập</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

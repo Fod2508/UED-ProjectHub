@@ -1,5 +1,7 @@
-import React from 'react';
-import { useApp } from '../context/AppContext.tsx';
+import React, { useState, useEffect } from "react";
+import { useApp } from "../context/AppContext.tsx";
+import { groupService } from "../services/groupService.ts";
+import { GroupMembersCard } from "../components/GroupMembersCard.tsx";
 import {
   Users,
   KanbanSquare,
@@ -12,269 +14,538 @@ import {
   AlertTriangle,
   GraduationCap,
   Sparkles,
-  ExternalLink
-} from 'lucide-react';
+  ExternalLink,
+  ShieldCheck,
+  Crown,
+  Calendar,
+} from "lucide-react";
 
 export const DashboardView: React.FC = () => {
-  const { setCurrentScreen, tasks, milestones, groupReport, currentRole } = useApp();
+  const {
+    setCurrentScreen,
+    tasks,
+    milestones,
+    groupReport,
+    currentRole,
+    currentUser,
+    classGroups,
+  } = useApp();
 
-  const completedTasks = tasks.filter((t) => t.status === 'Hoàn thành').length;
-  const overdueTasks = tasks.filter((t) => t.priority === 'Ưu tiên Cao' && t.status !== 'Hoàn thành').length;
-  const activeMilestone = milestones.find((m) => m.status === 'Đang mở (Nước rút)') || milestones[1];
+  const [groupMembers, setGroupMembers] = useState<
+    Array<{
+      id: string;
+      name: string;
+      email?: string;
+      avatarText: string;
+      role?: string;
+      skills: string[];
+      isLeader: boolean;
+    }>
+  >([]);
+  const [loadingMembers, setLoadingMembers] = useState(true);
+
+  // Load group members
+  useEffect(() => {
+    const loadGroupMembers = async () => {
+      if (!currentUser?.teamId) {
+        setLoadingMembers(false);
+        return;
+      }
+
+      try {
+        const members = await groupService.getGroupMembers(currentUser.teamId);
+        setGroupMembers(members);
+      } catch (error) {
+        console.error("Error loading group members:", error);
+      } finally {
+        setLoadingMembers(false);
+      }
+    };
+
+    loadGroupMembers();
+  }, [currentUser?.teamId]);
+
+  const completedTasks = tasks.filter((t) => t.status === "Hoàn thành").length;
+  const overdueTasks = tasks.filter(
+    (t) => t.priority === "Ưu tiên Cao" && t.status !== "Hoàn thành",
+  ).length;
+  const activeMilestone = milestones.find(
+    (m) => m.status === "Đang mở (Nước rút)",
+  ) ||
+    milestones[1] || { name: "Cột mốc 2", dueDate: "15/12/2026" };
 
   const warningMembers = groupReport.members.filter((m) => m.isWarning);
 
-  return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12">
-      {/* 1. Project Hero Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 rounded-2xl p-6 sm:p-8 text-white shadow-lg shadow-blue-900/10">
-        <div className="relative z-10 space-y-3 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-white text-xs font-semibold">
-            <GraduationCap className="w-3.5 h-3.5" />
-            <span>Khoa Công nghệ Thông tin • Học kỳ 1 (2026 - 2027)</span>
-          </div>
+  // ==========================================
+  // LECTURER VIEW: DASHBOARD TỔNG QUAN MÔN HỌC
+  // ==========================================
+  if (currentRole === "lecturer") {
+    return (
+      <div className="max-w-7xl mx-auto space-y-8 pb-12">
+        {/* 1. Lecturer Hero Banner */}
+        <div className="bg-gradient-to-r from-indigo-700 via-indigo-600 to-blue-700 rounded-3xl p-8 text-white shadow-sm">
+          <div className="max-w-3xl space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-xs text-xs font-semibold border border-white/20">
+              <ShieldCheck className="w-4 h-4 text-emerald-300" />
+              <span>Chế độ Quản trị Môn học: TS. Trần Văn B</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              Học phần Đồ án Chuyên ngành (HK1 2026 - 2027)
+            </h1>
+            <p className="text-sm opacity-90 leading-relaxed">
+              Theo dõi tiến độ toàn bộ 6 nhóm đồ án sinh viên, quản lý khung điểm 100%, cấu hình tiêu chí đánh giá chéo và phát hiện sớm các trường hợp Free-rider cần can thiệp.
+            </p>
 
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Hệ thống Quản lý Đồ án: Nhóm 04
-          </h1>
+            <div className="flex flex-wrap gap-3 pt-3">
+              <button
+                onClick={() => setCurrentScreen("milestones")}
+                className="px-5 py-2.5 rounded-xl bg-white text-indigo-700 font-semibold text-xs sm:text-sm hover:bg-indigo-50 transition flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                <CalendarCheck className="w-4 h-4" />
+                <span>Cột mốc &amp; Khung 100%</span>
+              </button>
 
-          <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">
-            Đề tài: <strong className="text-white">Xây dựng Nền tảng Quản lý Đồ án Môn học &amp; Đánh giá Chéo Chống Free-rider</strong>.
-            Giảng viên hướng dẫn: <strong className="text-white">TS. Trần Văn B</strong>.
-          </p>
+              <button
+                onClick={() => setCurrentScreen("matchmaking")}
+                className="px-5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs sm:text-sm border border-white/20 transition flex items-center gap-2 cursor-pointer"
+              >
+                <Users className="w-4 h-4" />
+                <span>Quản lý 6 Nhóm ({classGroups.length})</span>
+              </button>
 
-          <div className="pt-2 flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => setCurrentScreen('kanban')}
-              className="px-4 py-2 rounded-xl bg-white text-blue-700 font-bold text-xs sm:text-sm hover:bg-blue-50 transition shadow-xs flex items-center gap-2 cursor-pointer"
-            >
-              <KanbanSquare className="w-4 h-4" />
-              <span>Vào Bảng Kanban</span>
-            </button>
-
-            <button
-              onClick={() => setCurrentScreen('report')}
-              className="px-4 py-2 rounded-xl bg-blue-800/80 hover:bg-blue-800 text-white font-semibold text-xs sm:text-sm border border-blue-400/40 transition flex items-center gap-2 cursor-pointer"
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>Xem Báo cáo Đóng góp</span>
-            </button>
+              <button
+                onClick={() => setCurrentScreen("report")}
+                className="px-5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs sm:text-sm transition flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                <span>Xử lý Cảnh báo Free-rider</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Decorative circle graphic */}
-        <div className="absolute right-0 top-0 bottom-0 w-96 bg-radial from-white/10 to-transparent pointer-events-none hidden lg:block" />
-      </div>
-
-      {/* 2. Quick KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1 */}
-        <div
-          onClick={() => setCurrentScreen('matchmaking')}
-          className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-blue-400 transition cursor-pointer space-y-2"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Sĩ số nhóm</span>
-            <Users className="w-4 h-4 text-blue-600" />
-          </div>
-          <div className="text-2xl font-extrabold text-slate-900 tabular-nums">
-            4 / 4 thành viên
-          </div>
-          <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Đã ghép nhóm hoàn chỉnh</span>
-          </p>
-        </div>
-
-        {/* KPI 2 */}
-        <div
-          onClick={() => setCurrentScreen('kanban')}
-          className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-blue-400 transition cursor-pointer space-y-2"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Tiến độ Sprint 2</span>
-            <Clock className="w-4 h-4 text-blue-600" />
-          </div>
-          <div className="text-2xl font-extrabold text-slate-900 tabular-nums">
-            {completedTasks} / {tasks.length} task
-          </div>
-          <p className="text-[11px] text-blue-600 font-medium">
-            40% khối lượng đã hoàn thành
-          </p>
-        </div>
-
-        {/* KPI 3 */}
-        <div
-          onClick={() => setCurrentScreen('milestones')}
-          className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-blue-400 transition cursor-pointer space-y-2"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Cột mốc mục tiêu</span>
-            <CalendarCheck className="w-4 h-4 text-blue-600" />
-          </div>
-          <div className="text-base font-extrabold text-slate-900 truncate">
-            {activeMilestone.name.split(':')[0]}
-          </div>
-          <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-            <span>Hạn nộp: {activeMilestone.dueDate}</span>
-          </p>
-        </div>
-
-        {/* KPI 4 */}
-        <div
-          onClick={() => setCurrentScreen('report')}
-          className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-rose-400 transition cursor-pointer space-y-2"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Cảnh báo Free-rider</span>
-            <AlertTriangle className="w-4 h-4 text-rose-600" />
-          </div>
-          <div className="text-2xl font-extrabold text-rose-600 tabular-nums">
-            {warningMembers.length} thành viên
-          </div>
-          <p className="text-[11px] text-rose-600 font-medium">
-            Lê Văn Cúc (38% đóng góp)
-          </p>
-        </div>
-      </div>
-
-      {/* 3. Workflow Modules Cards (Giai đoạn 1 -> Giai đoạn 3) */}
-      <div className="space-y-4">
-        <h2 className="text-base font-bold text-slate-900">
-          Các giai đoạn nghiệp vụ của Đồ án
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Card Phase 1 */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition space-y-3 flex flex-col justify-between">
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                1
+        {/* 2. Key Metrics Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div
+            onClick={() => setCurrentScreen("matchmaking")}
+            className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs hover:border-indigo-300 hover:shadow-md transition cursor-pointer"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Nhóm sinh viên
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <Users className="w-4 h-4" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900">
-                Giai đoạn 1: Khảo sát &amp; Ghép nhóm
-              </h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Khảo sát ma trận lịch rảnh (Sáng/Chiều/Tối T2-CN), tính điểm bù trừ kỹ năng FinalScore = 60% Skill + 40% Time.
-              </p>
             </div>
-            <button
-              onClick={() => setCurrentScreen('matchmaking')}
-              className="pt-2 text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 self-start cursor-pointer"
-            >
-              <span>Vào Ghép nhóm (SCR_01 &amp; SCR_02)</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="text-3xl font-extrabold text-slate-900">
+              {classGroups.length} nhóm
+            </div>
+            <p className="text-xs text-slate-500 mt-1">46/48 SV đã có nhóm</p>
           </div>
 
-          {/* Card Phase 2 */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition space-y-3 flex flex-col justify-between">
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-                2
+          <div
+            onClick={() => setCurrentScreen("kanban")}
+            className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs hover:border-indigo-300 hover:shadow-md transition cursor-pointer"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Tiến độ Sprint chung
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <KanbanSquare className="w-4 h-4" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900">
-                Giai đoạn 2: Tiến độ &amp; Cột mốc nộp bài
-              </h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Bảng Kanban 5 cột kéo thả thời gian thực, tự động phát hiện task trễ hạn, và kiểm tra tổng trọng số cột mốc 100%.
-              </p>
             </div>
-            <div className="pt-2 flex items-center gap-3">
-              <button
-                onClick={() => setCurrentScreen('kanban')}
-                className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
-              >
-                <span>Kanban (SCR_03)</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
-              <span className="text-slate-300">•</span>
-              <button
-                onClick={() => setCurrentScreen('milestones')}
-                className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
-              >
-                <span>Cột mốc (SCR_04)</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
+            <div className="text-3xl font-extrabold text-blue-600">
+              {completedTasks}/{tasks.length} tasks
             </div>
+            <p className="text-xs text-slate-500 mt-1">Bảng Kanban đang mở</p>
           </div>
 
-          {/* Card Phase 3 */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition space-y-3 flex flex-col justify-between">
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                3
+          <div
+            onClick={() => setCurrentScreen("peer_review")}
+            className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs hover:border-indigo-300 hover:shadow-md transition cursor-pointer"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Đánh giá chéo Cột mốc 2
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <ClipboardCheck className="w-4 h-4" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900">
-                Giai đoạn 3: Đánh giá chéo &amp; Chống Free-rider
-              </h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Chấm điểm ẩn danh 3 tiêu chí, tự động gắn cờ cảnh báo thành viên thiếu đóng góp (&lt; 50% hoặc &lt; 2.5đ).
-              </p>
             </div>
-            <div className="pt-2 flex items-center gap-3">
-              <button
-                onClick={() => setCurrentScreen('peer_review')}
-                className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
-              >
-                <span>Đánh giá chéo (SCR_05)</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
-              <span className="text-slate-300">•</span>
-              <button
-                onClick={() => setCurrentScreen('report')}
-                className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
-              >
-                <span>Báo cáo (SCR_06)</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
+            <div className="text-3xl font-extrabold text-emerald-600">
+              87.5%
             </div>
+            <p className="text-xs text-slate-500 mt-1">4/6 nhóm đã nộp đủ</p>
+          </div>
+
+          <div
+            onClick={() => setCurrentScreen("report")}
+            className="bg-white p-6 rounded-2xl border-2 border-rose-200 shadow-xs hover:border-rose-400 hover:shadow-md transition cursor-pointer bg-rose-50/20"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-rose-600 uppercase tracking-wider">
+                Cảnh báo Free-rider
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-3xl font-extrabold text-rose-600">
+              1 trường hợp
+            </div>
+            <p className="text-xs text-rose-700 mt-1">Cần yêu cầu giải trình</p>
           </div>
         </div>
-      </div>
 
-      {/* 4. Team Members List */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-900">
-            Thành viên Nhóm 04 (4 Sinh viên)
-          </h3>
-          <span className="text-xs text-blue-600 font-medium">Học kỳ 1 • 2026 - 2027</span>
-        </div>
+        {/* 3. Workflow 3 Stages Overview for Lecturer */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900">
+              Tiến độ 3 Giai đoạn của Học phần
+            </h2>
+            <span className="text-xs font-medium text-slate-500">
+              Mô hình Scrum &amp; Nghiệm thu Đóng góp
+            </span>
+          </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {groupReport.members.map((m) => (
-            <div
-              key={m.id}
-              className={`p-3.5 rounded-xl border transition ${
-                m.isWarning ? 'border-rose-300 bg-rose-50/30' : 'border-slate-200 bg-slate-50/50'
-              }`}
-            >
-              <div className="flex items-center gap-2.5 mb-2">
-                <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold ${
-                    m.isWarning ? 'bg-rose-600' : 'bg-blue-600'
-                  }`}
-                >
-                  {m.avatarText}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Stage 1 */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm">
+                  1
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">{m.name}</h4>
-                  <span className="text-[10px] text-slate-400 font-mono">{m.studentId}</span>
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-500 mb-2 truncate">{m.roleInTeam}</p>
-              <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-200/60">
-                <span className="text-slate-400">Đóng góp:</span>
-                <span className={`font-bold ${m.isWarning ? 'text-rose-600' : 'text-blue-600'}`}>
-                  {m.contributionScore}%
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-xs border border-emerald-200">
+                  Hoàn tất
                 </span>
               </div>
+              <h3 className="font-bold text-slate-900 text-sm">
+                Giai đoạn 1: Ghép nhóm thông minh
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                So khớp ma trận kỹ năng và lịch rảnh. Các Trưởng nhóm đã duyệt xong ứng viên gia nhập.
+              </p>
+              <button
+                onClick={() => setCurrentScreen("matchmaking")}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer pt-1"
+              >
+                <span>Xem danh mục nhóm</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-          ))}
+
+            {/* Stage 2 */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-sm">
+                  2
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold text-xs border border-blue-200">
+                  Đang diễn ra
+                </span>
+              </div>
+              <h3 className="font-bold text-slate-900 text-sm">
+                Giai đoạn 2: Theo dõi tiến độ Kanban
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Giảng viên đã công bố Cột mốc 2 (30% trọng số). Các nhóm đang phân chia task và chạy nước rút.
+              </p>
+              <button
+                onClick={() => setCurrentScreen("kanban")}
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer pt-1"
+              >
+                <span>Giám sát Kanban</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Stage 3 */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 font-bold flex items-center justify-center text-sm">
+                  3
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-semibold text-xs border border-amber-200">
+                  Đang đánh giá
+                </span>
+              </div>
+              <h3 className="font-bold text-slate-900 text-sm">
+                Giai đoạn 3: Nghiệm thu &amp; Free-rider
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Đánh giá chéo ẩn danh 3 tiêu chí. Tổng hợp điểm tự động để phát hiện thành viên ỷ lại.
+              </p>
+              <button
+                onClick={() => setCurrentScreen("report")}
+                className="text-xs font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer pt-1"
+              >
+                <span>Xem Báo cáo đóng góp</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+    );
+  }
+
+  // ==========================================
+  // STUDENT VIEW (TRƯỞNG NHÓM / THÀNH VIÊN)
+  // ==========================================
+  return (
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
+      {/* 1. Hero Banner - Conditional based on group membership */}
+      {currentUser?.teamId ? (
+        // User HAS a group - Show group dashboard
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-8 text-white">
+          <div className="max-w-3xl">
+            <p className="text-sm opacity-90 mb-2">Học kỳ 1 • 2026 - 2027</p>
+            <h1 className="text-3xl font-bold mb-4">
+              {currentUser.teamName || "Nhóm"} - Quản lý Đồ án
+            </h1>
+
+            <div className="flex flex-wrap gap-3 mt-6">
+              <button
+                onClick={() => setCurrentScreen("kanban")}
+                className="px-6 py-3 rounded-xl bg-white text-blue-700 font-semibold hover:bg-blue-50 transition flex items-center gap-2 cursor-pointer"
+              >
+                <KanbanSquare className="w-5 h-5" />
+                <span>Bảng Kanban</span>
+              </button>
+
+              <button
+                onClick={() => setCurrentScreen("report")}
+                className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/20 transition flex items-center gap-2 cursor-pointer"
+              >
+                <BarChart3 className="w-5 h-5" />
+                <span>Báo cáo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        // User DOES NOT have a group - Show welcome message
+        <div className="bg-gradient-to-r from-slate-600 to-slate-700 rounded-3xl p-8 text-white">
+          <div className="max-w-3xl">
+            <p className="text-sm opacity-90 mb-2">Học kỳ 1 • 2026 - 2027</p>
+            <h1 className="text-3xl font-bold mb-4">
+              Chào mừng đến với UED ProjectHub
+            </h1>
+            <p className="text-base opacity-90 mb-6">
+              Bạn chưa tham gia nhóm nào. Hãy tìm nhóm phù hợp hoặc tạo nhóm mới
+              để bắt đầu làm việc!
+            </p>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setCurrentScreen("matchmaking")}
+                className="px-6 py-3 rounded-xl bg-white text-slate-700 font-semibold hover:bg-slate-50 transition flex items-center gap-2 cursor-pointer"
+              >
+                <Users className="w-5 h-5" />
+                <span>Tìm nhóm</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. KPI Cards - Only show if user has a group */}
+      {currentUser?.teamId && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* KPI 1 */}
+          <div
+            onClick={() => setCurrentScreen("matchmaking")}
+            className="bg-white p-6 rounded-2xl hover:shadow-lg transition cursor-pointer"
+          >
+            <Users className="w-8 h-8 text-blue-600 mb-3" />
+            <div className="text-3xl font-bold text-slate-900 mb-1">
+              {groupMembers.length}/{4}
+            </div>
+            <p className="text-sm text-slate-600">Thành viên</p>
+          </div>
+
+          {/* KPI 2 */}
+          <div
+            onClick={() => setCurrentScreen("kanban")}
+            className="bg-white p-6 rounded-2xl hover:shadow-lg transition cursor-pointer"
+          >
+            <Clock className="w-8 h-8 text-indigo-600 mb-3" />
+            <div className="text-3xl font-bold text-slate-900 mb-1">
+              {completedTasks}/{tasks.length}
+            </div>
+            <p className="text-sm text-slate-600">Tasks hoàn thành</p>
+          </div>
+
+          {/* KPI 3 */}
+          <div
+            onClick={() => setCurrentScreen("milestones")}
+            className="bg-white p-6 rounded-2xl hover:shadow-lg transition cursor-pointer"
+          >
+            <CalendarCheck className="w-8 h-8 text-emerald-600 mb-3" />
+            <div className="text-lg font-bold text-slate-900 mb-1 truncate">
+              {activeMilestone?.name || "Cột mốc 2"}
+            </div>
+            <p className="text-sm text-slate-600">
+              {activeMilestone?.dueDate || "15/12/2026"}
+            </p>
+          </div>
+
+          {/* KPI 4 */}
+          <div
+            onClick={() => setCurrentScreen("report")}
+            className="bg-white p-6 rounded-2xl hover:shadow-lg transition cursor-pointer"
+          >
+            <AlertTriangle className="w-8 h-8 text-rose-600 mb-3" />
+            <div className="text-3xl font-bold text-rose-600 mb-1">
+              {warningMembers.length}
+            </div>
+            <p className="text-sm text-slate-600">Cảnh báo</p>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Workflow Phases - Simplified */}
+      <div className="space-y-5">
+        <h2 className="text-xl font-bold text-slate-900">Quy trình</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Phase 1 */}
+          <div className="bg-white p-6 rounded-2xl hover:shadow-lg transition">
+            <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xl mb-4">
+              1
+            </div>
+            <h3 className="text-base font-bold text-slate-900 mb-2">
+              Ghép nhóm
+            </h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Khảo sát lịch rảnh và ghép nhóm thông minh
+            </p>
+            <button
+              onClick={() => setCurrentScreen("matchmaking")}
+              className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+            >
+              <span>Xem chi tiết</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Phase 2 */}
+          <div className="bg-white p-6 rounded-2xl hover:shadow-lg transition">
+            <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xl mb-4">
+              2
+            </div>
+            <h3 className="text-base font-bold text-slate-900 mb-2">Tiến độ</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Kanban board và quản lý cột mốc
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setCurrentScreen("kanban")}
+                className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+              >
+                Kanban
+              </button>
+              <span className="text-slate-300">•</span>
+              <button
+                onClick={() => setCurrentScreen("milestones")}
+                className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+              >
+                Cột mốc
+              </button>
+            </div>
+          </div>
+
+          {/* Phase 3 */}
+          <div className="bg-white p-6 rounded-2xl hover:shadow-lg transition">
+            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xl mb-4">
+              3
+            </div>
+            <h3 className="text-base font-bold text-slate-900 mb-2">
+              Đánh giá
+            </h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Đánh giá chéo và chống free-rider
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setCurrentScreen("peer_review")}
+                className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+              >
+                Đánh giá
+              </button>
+              <span className="text-slate-300">•</span>
+              <button
+                onClick={() => setCurrentScreen("report")}
+                className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+              >
+                Báo cáo
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Group Members Card - New Component */}
+      {currentUser?.teamId && groupMembers.length > 0 && (
+        <GroupMembersCard
+          members={groupMembers}
+          groupName={currentUser.teamName || "Nhóm 04"}
+          maxMembers={4}
+        />
+      )}
+
+      {/* 5. Team Members Contribution - Only show if user has a group */}
+      {currentUser?.teamId && (
+        <div className="bg-white p-6 rounded-2xl">
+          <h3 className="text-lg font-bold text-slate-900 mb-5">
+            Đóng góp thành viên
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {groupReport.members.map((m) => (
+              <div
+                key={m.id}
+                className={`p-4 rounded-xl transition ${
+                  m.isWarning
+                    ? "bg-rose-50 border border-rose-200"
+                    : "bg-slate-50"
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold ${
+                      m.isWarning ? "bg-rose-600" : "bg-blue-600"
+                    }`}
+                  >
+                    {m.avatarText}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-bold text-slate-900 truncate">
+                      {m.name}
+                    </h4>
+                    <span className="text-xs text-slate-500">
+                      {m.studentId}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-600 mb-3 line-clamp-1">
+                  {m.roleInTeam}
+                </p>
+                <div className="flex items-center justify-between pt-3 border-t">
+                  <span className="text-xs text-slate-500">Đóng góp</span>
+                  <span
+                    className={`text-base font-bold ${m.isWarning ? "text-rose-600" : "text-blue-600"}`}
+                  >
+                    {m.contributionScore}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

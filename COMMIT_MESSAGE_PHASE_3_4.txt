@@ -1,0 +1,81 @@
+feat: Migrate Tasks & Milestones to Firestore with Realtime Sync (Phase 3-4)
+
+✅ Phase 3: Database Schema & Service Layer
+- Create taskService.ts with CRUD operations + realtime subscriptions
+- Create milestoneService.ts with CRUD operations + realtime subscriptions
+- Create applicationService.ts (ready for Phase 5)
+- Create userService.ts for profile management
+- Export all services in services/index.ts
+
+✅ Phase 4: Migrate LocalStorage → Firestore
+- Update AppContext:
+  - Import taskService, milestoneService
+  - Change tasks/milestones state from localStorage to Firestore
+  - Add useEffect for realtime task subscriptions (onSnapshot)
+  - Add useEffect for realtime milestone subscriptions
+  - Convert all task functions to async (addTask, updateTask, deleteTask, moveTask)
+  - Convert all milestone functions to async (addMilestone, updateMilestone)
+  
+- Create DataMigrationPrompt component:
+  - Auto-detect if user has no data
+  - Prompt to import demo data
+  - Import INITIAL_TASKS, INITIAL_MILESTONES to Firestore
+  
+- Create migrateToFirestore utility:
+  - migrateInitialDataToFirestore() function
+  - hasUserMigratedData() checker
+
+- Update App.tsx:
+  - Import and render DataMigrationPrompt
+  - Show prompt after login if no data exists
+
+🔥 Firestore Collections
+tasks/
+  - code, title, description, tag, priority, status
+  - dueDate, assigneeName, assigneeAvatar
+  - groupId, createdBy, createdAt, updatedAt
+
+milestones/
+  - name, phase, deliverables, dueDate, weight, status
+  - courseId, createdBy, createdAt, publishedAt
+
+applications/ (ready, not used in UI yet)
+  - applicantId, targetGroupId, status
+  - skills, matchScore, appliedAt
+
+🚀 Features
+- ✅ Tasks lưu trên Firestore (không còn localStorage)
+- ✅ Milestones lưu trên Firestore
+- ✅ Realtime sync với onSnapshot listeners
+- ✅ Multi-user collaboration (2+ users thấy changes realtime)
+- ✅ Auto-import demo data cho user mới
+- ✅ Console logs để debug (🔄 Subscribing, 📋 Tasks updated)
+
+🧪 Testing
+- npm run lint: 0 errors
+- Create task → Firestore document created
+- Move task → Firestore updated realtime
+- Update task → Firestore updated realtime
+- Delete task → Firestore document deleted
+- Multi-user test: 2 browsers → realtime sync working (< 1s)
+- Create milestone → Firestore + realtime sync
+- Import demo data → 10 tasks + 4 milestones
+
+📝 Documentation
+- PHASE_3_4_COMPLETE.md: Complete Phase 3-4 guide
+- TEST_FIRESTORE_REALTIME.md: Testing guide with multi-user scenarios
+- FIREBASE_INTEGRATION_SUMMARY.md: Overall progress summary
+
+⚠️ Still TODO
+- Applications vẫn localStorage (Phase 5)
+- Peer Reviews vẫn localStorage (Phase 5)
+- Firestore security rules vẫn test mode (Phase 6 - CRITICAL)
+
+📊 Impact
+- Tasks: LocalStorage → Firestore + Realtime
+- Milestones: LocalStorage → Firestore + Realtime
+- Multi-user: Isolated → Collaborative (< 1s sync)
+- Architecture: Monolithic → Service layer
+
+Next: Phase 5 - Applications & Peer Reviews Migration
+Priority: Phase 6 - Production Security Rules

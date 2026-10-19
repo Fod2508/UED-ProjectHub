@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { useApp } from '../context/AppContext.tsx';
-import { TimeSlot, DayOfWeek } from '../types/index.ts';
-import { calculateMatchScore, isTeamRecommended } from '../utils/scoring.ts';
+import React, { useState, useEffect } from "react";
+import { useApp } from "../context/AppContext.tsx";
+import { TimeSlot, DayOfWeek } from "../types/index.ts";
+import { calculateMatchScore, isTeamRecommended } from "../utils/scoring.ts";
+import { groupService } from "../services/groupService.ts";
+import { GroupMembersCard } from "../components/GroupMembersCard.tsx";
 import {
   Users,
   Calendar,
@@ -11,9 +13,17 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
-  Clock
-} from 'lucide-react';
-import { ReviewApplicantsModal } from './ReviewApplicantsModal.tsx';
+  Clock,
+  Search,
+  PlusCircle,
+  ArrowRight,
+  ShieldCheck,
+  Crown,
+  ExternalLink,
+  Filter,
+  BookOpen,
+} from "lucide-react";
+import { ReviewApplicantsModal } from "./ReviewApplicantsModal.tsx";
 
 export const MatchmakingView: React.FC = () => {
   const {
@@ -23,39 +33,82 @@ export const MatchmakingView: React.FC = () => {
     applicants,
     currentTeamCount,
     sendJoinRequest,
-    currentRole
+    findMatchingGroups,
+    createNewGroup,
+    currentRole,
+    showToast,
+    currentUser,
+    classGroups,
+    setCurrentScreen,
   } = useApp();
 
-  const days: DayOfWeek[] = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+  const [lecturerFilter, setLecturerFilter] = useState<"all" | "full" | "recruiting">("all");
+  const [lecturerSearch, setLecturerSearch] = useState("");
+
+  const [groupMembers, setGroupMembers] = useState<
+    Array<{
+      id: string;
+      name: string;
+      email?: string;
+      avatarText: string;
+      role?: string;
+      skills: string[];
+      isLeader: boolean;
+    }>
+  >([]);
+  const [loadingMembers, setLoadingMembers] = useState(true);
+
+  // Load group members
+  useEffect(() => {
+    const loadGroupMembers = async () => {
+      if (!currentUser?.teamId) {
+        setLoadingMembers(false);
+        return;
+      }
+
+      try {
+        const members = await groupService.getGroupMembers(currentUser.teamId);
+        setGroupMembers(members);
+      } catch (error) {
+        console.error("Error loading group members:", error);
+      } finally {
+        setLoadingMembers(false);
+      }
+    };
+
+    loadGroupMembers();
+  }, [currentUser?.teamId]);
+
+  const days: DayOfWeek[] = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
   const dayLabels: Record<DayOfWeek, string> = {
-    T2: 'Thứ Hai (T2)',
-    T3: 'Thứ Ba (T3)',
-    T4: 'Thứ Tư (T4)',
-    T5: 'Thứ Năm (T5)',
-    T6: 'Thứ Sáu (T6)',
-    T7: 'Thứ Bảy (T7)',
-    CN: 'Chủ Nhật (CN)'
+    T2: "Thứ Hai (T2)",
+    T3: "Thứ Ba (T3)",
+    T4: "Thứ Tư (T4)",
+    T5: "Thứ Năm (T5)",
+    T6: "Thứ Sáu (T6)",
+    T7: "Thứ Bảy (T7)",
+    CN: "Chủ Nhật (CN)",
   };
-  const timeSlots: TimeSlot[] = ['Sáng', 'Chiều', 'Tối'];
+  const timeSlots: TimeSlot[] = ["Sáng", "Chiều", "Tối"];
 
   // User input for candidate skills & proposal
   const [selectedSkills, setSelectedSkills] = useState<string[]>([
-    'Frontend (React)',
-    'Thiết kế UI/UX'
+    "Frontend (React)",
+    "Thiết kế UI/UX",
   ]);
   const [userNote, setUserNote] = useState<string>(
-    'Em có kinh nghiệm React, Tailwind CSS và Figma, mong muốn cùng nhóm làm đồ án đạt điểm cao!'
+    "Em có kinh nghiệm React, Tailwind CSS và Figma, mong muốn cùng nhóm làm đồ án đạt điểm cao!",
   );
 
   const availableSkillsList = [
-    'Frontend (React)',
-    'Frontend (Vue.js)',
-    'Backend (Node.js/Express)',
-    'Backend (Python/Django)',
-    'Thiết kế UI/UX (Figma)',
-    'Cơ sở dữ liệu (PostgreSQL)',
-    'Kiểm thử & QA (Postman)',
-    'DevOps & Docker'
+    "Frontend (React)",
+    "Frontend (Vue.js)",
+    "Backend (Node.js/Express)",
+    "Backend (Python/Django)",
+    "Thiết kế UI/UX (Figma)",
+    "Cơ sở dữ liệu (PostgreSQL)",
+    "Kiểm thử & QA (Postman)",
+    "DevOps & Docker",
   ];
 
   const toggleSkill = (skill: string) => {
@@ -77,105 +130,436 @@ export const MatchmakingView: React.FC = () => {
   // Calculate Time Score based on free slots (assuming ideal overlap is 4+ sessions)
   const timeScore = Math.min(100, Math.round((freeSlotsCount / 10) * 100));
   // Calculate Skill Score based on complementary skills
-  const skillScore = Math.min(100, Math.round((selectedSkills.length / 3) * 95));
+  const skillScore = Math.min(
+    100,
+    Math.round((selectedSkills.length / 3) * 95),
+  );
   // Core formula: FinalScore = (SkillScore * 0.6) + (TimeScore * 0.4)
   const finalScore = calculateMatchScore(skillScore, timeScore);
   const isRecommended = isTeamRecommended(finalScore);
 
-  const pendingCount = applicants.filter((a) => a.status === 'pending').length;
+  const pendingCount = applicants.filter((a) => a.status === "pending").length;
 
-  const handleSendJoin = () => {
-    sendJoinRequest(selectedSkills, userNote);
+  // Track whether user has triggered the "Tìm nhóm" action
+  const [hasSearched, setHasSearched] = useState(false);
+  const [matchingGroups, setMatchingGroups] = useState<
+    Array<{ id: string; name: string; matchScore: number }>
+  >([]);
+
+  const hasGroup = Boolean(currentUser?.teamId);
+
+  const handleFindGroup = async () => {
+    // Check if user is already in a group
+    if (hasGroup) {
+      showToast(
+        "Bạn đã là thành viên của một nhóm. Không thể tìm kiếm nhóm khác.",
+        "warning",
+      );
+      return;
+    }
+
+    setHasSearched(true);
+    const results = await findMatchingGroups(selectedSkills, scheduleMatrix);
+    setMatchingGroups(results);
+
+    if (results.length > 0 && results[0].matchScore >= 80) {
+      showToast(
+        `Tìm thấy ${results.length} nhóm phù hợp! Điểm cao nhất: ${results[0].matchScore}%. Hãy gửi yêu cầu tham gia.`,
+        "success",
+      );
+    } else if (results.length > 0) {
+      showToast(
+        `Tìm thấy ${results.length} nhóm (điểm cao nhất: ${results[0].matchScore}%). Bạn có thể gửi yêu cầu hoặc tạo nhóm mới.`,
+        "info",
+      );
+    }
   };
 
-  return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12">
-      {/* Top Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
-            <Users className="w-3.5 h-3.5" />
-            <span>Giai đoạn 1 • Ghép nhóm thông minh</span>
+  const handleCreateNewGroup = async () => {
+    // Check if user is already in a group
+    if (hasGroup) {
+      showToast(
+        "Bạn đã là thành viên của một nhóm. Không thể tạo nhóm mới.",
+        "warning",
+      );
+      return;
+    }
+
+    const result = await createNewGroup(selectedSkills, scheduleMatrix);
+    if (result.success) {
+      // Reset search state
+      setHasSearched(false);
+      setMatchingGroups([]);
+    }
+  };
+
+  const handleSendJoin = () => {
+    const targetGroup = matchingGroups[0]?.id || "nhom_04";
+    sendJoinRequest(selectedSkills, userNote, targetGroup);
+  };
+
+  // ==========================================
+  // LECTURER VIEW: QUẢN LÝ DANH MỤC NHÓM & ĐỀ TÀI
+  // ==========================================
+  if (currentRole === "lecturer") {
+    const fullCount = classGroups.filter((g) => g.status === "Đủ thành viên").length;
+    const recruitingCount = classGroups.filter((g) => g.status === "Đang tuyển thành viên").length;
+
+    const filteredClassGroups = classGroups.filter((group) => {
+      if (lecturerFilter === "full" && group.status !== "Đủ thành viên") return false;
+      if (lecturerFilter === "recruiting" && group.status !== "Đang tuyển thành viên") return false;
+
+      if (lecturerSearch.trim()) {
+        const q = lecturerSearch.toLowerCase();
+        const matchName = group.name.toLowerCase().includes(q);
+        const matchTopic = group.topic.toLowerCase().includes(q);
+        const matchLeader = group.leaderName.toLowerCase().includes(q);
+        if (!matchName && !matchTopic && !matchLeader) return false;
+      }
+      return true;
+    });
+
+    return (
+      <div className="max-w-7xl mx-auto space-y-6 pb-12">
+        {/* Header Title */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">
+                <Users className="w-4 h-4" />
+              </span>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+                Quản lý Danh mục Nhóm &amp; Đề tài Đồ án
+              </h1>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500">
+              Giám sát cơ cấu nhân sự, đề tài đăng ký và tiến độ ghép nhóm của sinh viên toàn khóa.
+            </p>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-            Khảo sát lịch rảnh &amp; Gợi ý ghép nhóm bù trừ năng lực
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500">
-            Thuật toán tự động ghép đôi theo công thức: <strong className="text-blue-700 font-semibold">FinalScore = (SkillScore × 0.6) + (TimeScore × 0.4)</strong>. Nhóm có độ phù hợp &gt; 80% sẽ được khuyên chọn hàng đầu.
-          </p>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={() => setCurrentScreen("kanban")}
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>Xem Bảng Kanban chung</span>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+            </button>
+            <button
+              onClick={() => setCurrentScreen("milestones")}
+              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+            >
+              <span>Quản lý Cột mốc nộp bài</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        {/* Action Button for Leader / Reviewer */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <button
-            onClick={() => setIsApplicantModalOpen(true)}
-            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm shadow-md shadow-blue-600/20 transition flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <UserCheck className="w-4 h-4" />
-            <span>Duyệt yêu cầu tham gia (SCR_02)</span>
-            {pendingCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-white text-blue-700 text-[11px] font-bold flex items-center justify-center">
-                {pendingCount}
-              </span>
-            )}
-          </button>
+        {/* 4 Stat Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              Tổng số nhóm đồ án
+            </span>
+            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
+              {classGroups.length} nhóm
+            </div>
+            <p className="text-xs text-slate-500 mt-1">100% đã đăng ký đề tài</p>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
+            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">
+              <span>Đã đủ thành viên</span>
+            </span>
+            <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">
+              {fullCount} nhóm
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Đạt sĩ số chuẩn 4 SV/nhóm</p>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
+            <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1">
+              <span>Đang tuyển bổ sung</span>
+            </span>
+            <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1">
+              {recruitingCount} nhóm
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Thiếu chuyên môn lập trình</p>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
+            <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">
+              Tỷ lệ có nhóm toàn khóa
+            </span>
+            <div className="text-2xl sm:text-3xl font-extrabold text-indigo-700 mt-1">
+              95.8%
+            </div>
+            <p className="text-xs text-slate-500 mt-1">46/48 sinh viên đã vào nhóm</p>
+          </div>
+        </div>
+
+        {/* Filter and Search Bar */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <div className="flex items-center p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+              <button
+                onClick={() => setLecturerFilter("all")}
+                className={`px-3 py-1.5 rounded-lg transition ${
+                  lecturerFilter === "all"
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Tất cả ({classGroups.length})
+              </button>
+              <button
+                onClick={() => setLecturerFilter("full")}
+                className={`px-3 py-1.5 rounded-lg transition ${
+                  lecturerFilter === "full"
+                    ? "bg-white text-emerald-700 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Đủ thành viên ({fullCount})
+              </button>
+              <button
+                onClick={() => setLecturerFilter("recruiting")}
+                className={`px-3 py-1.5 rounded-lg transition ${
+                  lecturerFilter === "recruiting"
+                    ? "bg-white text-amber-700 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Đang tuyển ({recruitingCount})
+              </button>
+            </div>
+          </div>
+
+          <div className="relative min-w-[260px]">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={lecturerSearch}
+              onChange={(e) => setLecturerSearch(e.target.value)}
+              placeholder="Tìm theo tên nhóm, đề tài, trưởng nhóm..."
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition"
+            />
+          </div>
+        </div>
+
+        {/* Groups Cards Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {filteredClassGroups.map((group) => {
+            const isFull = group.status === "Đủ thành viên";
+            return (
+              <div
+                key={group.id}
+                className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 space-y-4 hover:border-indigo-200 transition"
+              >
+                {/* Header row */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-bold text-slate-900">
+                        {group.name}
+                      </span>
+                      <span
+                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                          isFull
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}
+                      >
+                        {group.status} ({group.memberCount}/{group.maxMembers})
+                      </span>
+                    </div>
+                    <p className="text-xs font-semibold text-indigo-700 flex items-center gap-1.5">
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>{group.topic}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Leader Box */}
+                <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-xs">
+                      {group.leaderAvatar}
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 flex items-center gap-1">
+                        <span>{group.leaderName}</span>
+                        <Crown className="w-3.5 h-3.5 text-amber-500" />
+                      </div>
+                      <span className="text-[11px] text-slate-400">{group.leaderEmail}</span>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 bg-white text-slate-600 border border-slate-200 rounded text-[11px] font-medium">
+                    Trưởng nhóm
+                  </span>
+                </div>
+
+                {/* Members list */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Thành viên nhóm ({group.members.length})
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {group.members.map((member, idx) => (
+                      <div
+                        key={idx}
+                        className="p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-2 text-xs"
+                      >
+                        <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[10px]">
+                          {member.avatar}
+                        </div>
+                        <div className="truncate">
+                          <span className="font-medium text-slate-800 truncate block">
+                            {member.name}
+                          </span>
+                          <span className="text-[10px] text-slate-400 truncate block">
+                            {member.role}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Missing Skills Warning if recruiting */}
+                {!isFull && group.missingSkills && group.missingSkills.length > 0 && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 space-y-1">
+                    <span className="font-bold">⚠️ Vị trí chuyên môn nhóm đang còn thiếu:</span>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {group.missingSkills.map((skill, sIdx) => (
+                        <span
+                          key={sIdx}
+                          className="px-2 py-0.5 rounded-full bg-white text-amber-700 border border-amber-300 text-[11px] font-semibold"
+                        >
+                          + {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Kanban Sprint Progress */}
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500 font-medium">Tiến độ Sprint:</span>
+                    <strong className="text-slate-900 font-bold">{group.kanbanProgress}%</strong>
+                  </div>
+                  <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-indigo-600 rounded-full"
+                      style={{ width: `${group.kanbanProgress}%` }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      setCurrentScreen("kanban");
+                      showToast(`Đang chuyển tới Bảng tiến độ của ${group.name}`, "info");
+                    }}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Xem Kanban</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // STUDENT VIEW (TRƯỞNG NHÓM / THÀNH VIÊN)
+  // ==========================================
+  return (
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
+      {/* Simplified Header */}
+      <div className="bg-white p-6 rounded-2xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">
+              Ghép nhóm thông minh
+            </h1>
+            <p className="text-sm text-slate-600">
+              Khảo sát lịch rảnh và gợi ý nhóm phù hợp
+            </p>
+          </div>
+
+          {/* Chỉ hiển thị nút Duyệt yêu cầu nếu là Trưởng nhóm hoặc ở chế độ Demo */}
+          {((currentUser && currentUser.isGroupLeader) ||
+            (!currentUser && currentRole === "student")) && (
+            <button
+              onClick={() => setIsApplicantModalOpen(true)}
+              className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition flex items-center gap-2 cursor-pointer self-start"
+            >
+              <UserCheck className="w-5 h-5" />
+              <span>Duyệt yêu cầu</span>
+              {pendingCount > 0 && (
+                <span className="w-6 h-6 rounded-full bg-white text-blue-700 text-xs font-bold flex items-center justify-center">
+                  {pendingCount}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Grid: 2 Columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* LEFT: Free Schedule Matrix (7 cols) */}
-        <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-600" />
-              <h2 className="text-sm sm:text-base font-bold text-slate-900">
-                Ma trận lịch rảnh hàng tuần của bạn
-              </h2>
-            </div>
-            <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md">
-              Đã chọn: {freeSlotsCount} buổi rảnh
+      {/* Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* LEFT: Schedule Matrix */}
+        <div className="lg:col-span-7 bg-white p-6 rounded-2xl">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-bold text-slate-900">Lịch rảnh</h2>
+            <span className="text-sm font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg">
+              {freeSlotsCount} buổi
             </span>
           </div>
 
-          <p className="text-xs text-slate-500">
-            Bấm chọn các buổi bạn có thể tham gia họp nhóm trực tiếp hoặc online (Sáng, Chiều, Tối từ Thứ 2 đến Chủ Nhật).
-          </p>
-
-          {/* Interactive Matrix Table */}
+          {/* Simplified Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-center border-collapse text-xs">
+            <table className="w-full text-center text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80">
-                  <th className="py-2.5 px-2 text-slate-400 font-semibold text-left">Buổi \ Thứ</th>
+                <tr className="border-b bg-slate-50">
+                  <th className="py-3 px-3 text-slate-600 font-semibold text-left">
+                    Buổi
+                  </th>
                   {days.map((day) => (
-                    <th key={day} className="py-2.5 px-2 font-bold text-slate-700">
+                    <th
+                      key={day}
+                      className="py-3 px-2 font-bold text-slate-700"
+                    >
                       {day}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y">
                 {timeSlots.map((slot) => (
-                  <tr key={slot} className="hover:bg-slate-50/50 transition">
-                    <td className="py-3 px-2 text-left font-semibold text-slate-700 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{slot}</span>
+                  <tr key={slot} className="hover:bg-slate-50">
+                    <td className="py-3 px-3 text-left font-semibold text-slate-700">
+                      {slot}
                     </td>
                     {days.map((day) => {
                       const isFree = !!scheduleMatrix[day]?.[slot];
                       return (
-                        <td key={day} className="py-2 px-1">
+                        <td key={day} className="py-2 px-2">
                           <button
                             type="button"
                             onClick={() => toggleScheduleSlot(day, slot)}
-                            className={`w-full py-2 px-1.5 rounded-lg font-medium text-[11px] transition cursor-pointer ${
+                            className={`w-full py-3 px-2 rounded-lg font-medium text-sm transition cursor-pointer ${
                               isFree
-                                ? 'bg-blue-600 text-white font-bold shadow-xs'
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-500'
+                                ? "bg-blue-600 text-white font-bold"
+                                : "bg-slate-100 hover:bg-slate-200 text-slate-500"
                             }`}
                           >
-                            {isFree ? 'Rảnh' : 'Bận'}
+                            {isFree ? "Rảnh" : "Bận"}
                           </button>
                         </td>
                       );
@@ -185,154 +569,176 @@ export const MatchmakingView: React.FC = () => {
               </tbody>
             </table>
           </div>
-
-          {/* Schedule explanation */}
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs text-slate-600">
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-blue-600 inline-block"></span>
-              Buổi rảnh (Sẵn sàng họp nhóm)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-slate-200 inline-block"></span>
-              Buổi bận (Lịch học trên lớp / Việc riêng)
-            </span>
-          </div>
         </div>
 
-        {/* RIGHT: Match Score Calculator & Group Recommendation (5 cols) */}
+        {/* RIGHT: Match Score or Group Info */}
         <div className="lg:col-span-5 space-y-6">
-          {/* Target Group Info Card */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 font-extrabold text-sm">
-                  04
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 leading-tight">
-                    Đồ án: Phát triển Ứng dụng Web - Nhóm 04
-                  </h3>
-                  <span className="text-xs text-slate-400">
-                    Sĩ số: <strong className="text-slate-700 font-semibold">{currentTeamCount}/4 thành viên</strong>
-                  </span>
-                </div>
-              </div>
-              <span
-                className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                  currentTeamCount >= 4
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-emerald-100 text-emerald-800'
-                }`}
-              >
-                {currentTeamCount >= 4 ? 'Đã đủ 4/4' : 'Đang tuyển'}
-              </span>
-            </div>
-
-            {/* Score Results Card */}
-            <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 via-indigo-50 to-white border border-blue-100 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-slate-500 font-medium">Điểm tương thích tổng hợp:</span>
-                  <div className="text-2xl font-extrabold text-slate-900 flex items-baseline gap-1 mt-0.5">
-                    <span className="text-blue-600 tabular-nums">{finalScore}%</span>
-                    <span className="text-xs font-normal text-slate-400">/ 100%</span>
+          {/* Group Info or Profile Card */}
+          <div className="bg-white p-6 rounded-2xl">
+            {hasGroup ? (
+              // User HAS a group - Show group info
+              <>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 font-bold text-lg flex items-center justify-center">
+                    {currentUser?.teamName?.match(/\d+/)?.[0] || "?"}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      {currentUser?.teamName || "Nhóm"}
+                    </h3>
+                    <span className="text-sm text-slate-600">
+                      {groupMembers.length}/4 thành viên
+                    </span>
                   </div>
                 </div>
 
-                <div className="text-right">
-                  {isRecommended ? (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                      Gợi ý ghép nhóm
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <div className="flex items-center justify-center gap-2 text-emerald-700 text-sm font-semibold">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>Bạn đã có nhóm ({currentUser?.teamName})</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              // User DOES NOT have a group - Show profile & search/create actions
+              <>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-600 font-bold text-lg flex items-center justify-center">
+                    {currentUser?.avatarText || "SV"}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      {currentUser?.name || "Người dùng"}
+                    </h3>
+                    <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                      Chưa có nhóm
                     </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
-                      Chưa tối ưu (&lt; 80%)
-                    </span>
-                  )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Progress calculation breakdown */}
-              <div className="space-y-1.5 text-xs text-slate-600 border-t border-blue-100/80 pt-2">
-                <div className="flex justify-between">
-                  <span>Kỹ năng bổ trợ (SkillScore × 60%):</span>
-                  <strong className="text-slate-800 tabular-nums">{skillScore}% → {(skillScore * 0.6).toFixed(1)}đ</strong>
+                {/* Skills Selection */}
+                <div className="mb-4">
+                  <label className="text-sm font-bold text-slate-800 block mb-2">
+                    Kỹ năng của bạn:
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {availableSkillsList.map((skill) => {
+                      const isChecked = selectedSkills.includes(skill);
+                      return (
+                        <button
+                          key={skill}
+                          type="button"
+                          onClick={() => toggleSkill(skill)}
+                          className={`text-xs px-3 py-2 rounded-lg border transition cursor-pointer ${
+                            isChecked
+                              ? "bg-blue-600 text-white border-blue-600 font-semibold"
+                              : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          {skill}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span>Khớp lịch rảnh (TimeScore × 40%):</span>
-                  <strong className="text-slate-800 tabular-nums">{timeScore}% → {(timeScore * 0.4).toFixed(1)}đ</strong>
-                </div>
-              </div>
 
-              {isRecommended && (
-                <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 flex items-start gap-1.5 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>
-                    Khuyên chọn hàng đầu • Bạn có kỹ năng Frontend/UI bù trừ lý tưởng với chuyên môn Backend &amp; Database của nhóm!
-                  </span>
+                {/* Message */}
+                <div className="mb-4">
+                  <label className="text-sm font-bold text-slate-800 block mb-2">
+                    Lời nhắn xin vào nhóm:
+                  </label>
+                  <textarea
+                    value={userNote}
+                    onChange={(e) => setUserNote(e.target.value)}
+                    rows={2}
+                    className="w-full text-sm p-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                    placeholder="Nhập lời nhắn tự giới thiệu bản thân..."
+                  />
                 </div>
-              )}
-            </div>
 
-            {/* Select skills to apply */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-800 block">
-                Kỹ năng bạn đảm nhận trong đồ án:
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {availableSkillsList.map((skill) => {
-                  const isChecked = selectedSkills.includes(skill);
-                  return (
+                {/* Actions: Find Group & Create Group */}
+                <div className="space-y-2.5 mb-5">
+                  <button
+                    onClick={handleFindGroup}
+                    className="w-full py-3 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-md shadow-indigo-600/20"
+                  >
+                    <Search className="w-5 h-5" />
+                    <span>Tìm nhóm phù hợp</span>
+                  </button>
+
+                  <button
+                    onClick={handleCreateNewGroup}
+                    className="w-full py-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <PlusCircle className="w-5 h-5 text-amber-600" />
+                    <span>Tạo nhóm mới (Làm trưởng nhóm)</span>
+                  </button>
+                </div>
+
+                {/* Search Results */}
+                {hasSearched && matchingGroups.length > 0 ? (
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 mb-3 animate-in fade-in">
+                    <div className="text-center mb-3">
+                      <div className="text-xs text-slate-500 mb-1">
+                        Nhóm phù hợp nhất được tìm thấy
+                      </div>
+                      <div className="text-3xl font-extrabold text-blue-600 mb-1">
+                        {matchingGroups[0].matchScore}%
+                      </div>
+                      <p className="text-sm font-bold text-slate-800">
+                        {matchingGroups[0].name}
+                      </p>
+                    </div>
+
+                    {matchingGroups[0].matchScore >= 80 ? (
+                      <div className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold mb-3">
+                        <Sparkles className="w-4 h-4" />
+                        <span>Rất phù hợp • Bù trừ kỹ năng & lịch rảnh</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-semibold mb-3">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>Độ phù hợp trung bình</span>
+                      </div>
+                    )}
+
                     <button
-                      key={skill}
-                      type="button"
-                      onClick={() => toggleSkill(skill)}
-                      className={`text-xs px-2.5 py-1 rounded-lg border transition cursor-pointer ${
-                        isChecked
-                          ? 'bg-blue-600 text-white border-blue-600 font-semibold'
-                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300'
-                      }`}
+                      onClick={handleSendJoin}
+                      className="w-full py-2.5 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer"
                     >
-                      {skill} {isChecked ? '✓' : '+'}
+                      <Send className="w-4 h-4" />
+                      <span>Gửi yêu cầu tham gia {matchingGroups[0].name}</span>
                     </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Message input */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-800 block">
-                Lời nhắn gửi Trưởng nhóm:
-              </label>
-              <textarea
-                value={userNote}
-                onChange={(e) => setUserNote(e.target.value)}
-                rows={2}
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                placeholder="Nhập lời nhắn ngắn gọn..."
-              />
-            </div>
-
-            {/* Submit join request button */}
-            <button
-              onClick={handleSendJoin}
-              disabled={currentTeamCount >= 4}
-              className={`w-full py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer ${
-                currentTeamCount >= 4
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20'
-              }`}
-            >
-              <Send className="w-4 h-4" />
-              <span>Gửi yêu cầu tham gia nhóm (Chờ duyệt)</span>
-            </button>
+                  </div>
+                ) : hasSearched && matchingGroups.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-center">
+                    <p className="text-xs text-amber-900 font-semibold mb-1">
+                      Chưa tìm thấy nhóm nào đang tuyển phù hợp.
+                    </p>
+                    <p className="text-xs text-amber-700">
+                      Hãy bấm <strong>"Tạo nhóm mới"</strong> ở trên để khởi tạo nhóm của bạn!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500">
+                    Bấm <strong>"Tìm nhóm phù hợp"</strong> để hệ thống so khớp kỹ năng và lịch rảnh của bạn với các nhóm đang tuyển.
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* MODAL SCR_02 */}
+      {/* Group Members Card - Display if user is in a group */}
+      {currentUser?.teamId && groupMembers.length > 0 && (
+        <GroupMembersCard
+          members={groupMembers}
+          groupName={currentUser.teamName || "Nhóm 04"}
+          maxMembers={4}
+        />
+      )}
+
       <ReviewApplicantsModal />
     </div>
   );

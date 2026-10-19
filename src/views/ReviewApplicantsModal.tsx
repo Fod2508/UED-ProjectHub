@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useApp } from '../context/AppContext.tsx';
+import React, { useState } from "react";
+import { useApp } from "../context/AppContext.tsx";
 import {
   X,
   Sparkles,
@@ -9,8 +9,8 @@ import {
   Info,
   Check,
   ThumbsUp,
-  UserCheck
-} from 'lucide-react';
+  UserCheck,
+} from "lucide-react";
 
 export const ReviewApplicantsModal: React.FC = () => {
   const {
@@ -20,23 +20,31 @@ export const ReviewApplicantsModal: React.FC = () => {
     acceptApplicant,
     rejectApplicant,
     currentTeamCount,
-    showToast
+    showToast,
+    currentUser,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'pending' | 'accepted' | 'rejected'>('pending');
+  const [activeTab, setActiveTab] = useState<
+    "pending" | "accepted" | "rejected"
+  >("pending");
 
   if (!isApplicantModalOpen) return null;
 
-  const pendingList = applicants.filter((a) => a.status === 'pending');
-  const acceptedList = applicants.filter((a) => a.status === 'accepted');
-  const rejectedList = applicants.filter((a) => a.status === 'rejected');
+  console.log(
+    "ReviewApplicantsModal rendering, applicants:",
+    applicants.length,
+  );
+
+  const pendingList = applicants.filter((a) => a.status === "pending");
+  const acceptedList = applicants.filter((a) => a.status === "accepted");
+  const rejectedList = applicants.filter((a) => a.status === "rejected");
 
   const currentList =
-    activeTab === 'pending'
+    activeTab === "pending"
       ? pendingList
-      : activeTab === 'accepted'
-      ? acceptedList
-      : rejectedList;
+      : activeTab === "accepted"
+        ? acceptedList
+        : rejectedList;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
@@ -48,9 +56,16 @@ export const ReviewApplicantsModal: React.FC = () => {
               Danh sách hồ sơ ứng tuyển mới nhất
             </h2>
             <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
-              <span>Sĩ số hiện tại: <strong className="text-blue-600 font-bold">{currentTeamCount}/4 thành viên</strong></span>
+              <span>
+                Sĩ số hiện tại:{" "}
+                <strong className="text-blue-600 font-bold">
+                  {currentTeamCount}/4 thành viên
+                </strong>
+              </span>
               <span>•</span>
-              <span className="text-blue-600 font-medium">⇅ Ưu tiên độ phù hợp cao nhất</span>
+              <span className="text-blue-600 font-medium">
+                ⇅ Ưu tiên độ phù hợp cao nhất
+              </span>
             </div>
           </div>
           <button
@@ -65,11 +80,11 @@ export const ReviewApplicantsModal: React.FC = () => {
         {/* Status Tabs */}
         <div className="px-6 pt-3 border-b border-slate-100 flex items-center gap-2 bg-white">
           <button
-            onClick={() => setActiveTab('pending')}
+            onClick={() => setActiveTab("pending")}
             className={`pb-3 text-xs sm:text-sm font-semibold transition border-b-2 flex items-center gap-1.5 ${
-              activeTab === 'pending'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+              activeTab === "pending"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-500 hover:text-slate-800"
             }`}
           >
             <span>Chờ duyệt</span>
@@ -78,11 +93,11 @@ export const ReviewApplicantsModal: React.FC = () => {
             </span>
           </button>
           <button
-            onClick={() => setActiveTab('accepted')}
+            onClick={() => setActiveTab("accepted")}
             className={`pb-3 text-xs sm:text-sm font-semibold transition border-b-2 flex items-center gap-1.5 ${
-              activeTab === 'accepted'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+              activeTab === "accepted"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-500 hover:text-slate-800"
             }`}
           >
             <span>Đã chấp nhận</span>
@@ -91,11 +106,11 @@ export const ReviewApplicantsModal: React.FC = () => {
             </span>
           </button>
           <button
-            onClick={() => setActiveTab('rejected')}
+            onClick={() => setActiveTab("rejected")}
             className={`pb-3 text-xs sm:text-sm font-semibold transition border-b-2 flex items-center gap-1.5 ${
-              activeTab === 'rejected'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+              activeTab === "rejected"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-500 hover:text-slate-800"
             }`}
           >
             <span>Đã từ chối</span>
@@ -140,12 +155,16 @@ export const ReviewApplicantsModal: React.FC = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-base font-bold text-slate-900">{app.name}</h3>
+                        <h3 className="text-base font-bold text-slate-900">
+                          {app.name}
+                        </h3>
                         <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
                           {app.className}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 font-mono mt-0.5">Mã SV: {app.studentId}</p>
+                      <p className="text-xs text-slate-400 font-mono mt-0.5">
+                        Mã SV: {app.studentId}
+                      </p>
                     </div>
                   </div>
 
@@ -173,7 +192,11 @@ export const ReviewApplicantsModal: React.FC = () => {
                 <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-700">
                   <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
                   <span>
-                    Trùng khớp lịch họp: <strong className="text-slate-900 font-semibold">{app.matchedSessionsCount} buổi/tuần</strong> ({app.matchedSessionsDetails})
+                    Trùng khớp lịch họp:{" "}
+                    <strong className="text-slate-900 font-semibold">
+                      {app.matchedSessionsCount} buổi/tuần
+                    </strong>{" "}
+                    ({app.matchedSessionsDetails})
                   </span>
                 </div>
 
@@ -188,46 +211,62 @@ export const ReviewApplicantsModal: React.FC = () => {
                 {/* Action buttons */}
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100">
                   <button
-                    onClick={() => showToast(`Hồ sơ năng lực của ${app.name}: Điểm GPA 3.65, Đạt chứng chỉ lập trình React/Node.js, Đồ án mẫu đạt loại Giỏi.`, 'info')}
+                    onClick={() =>
+                      showToast(
+                        `Hồ sơ năng lực của ${app.name}: Điểm GPA 3.65, Đạt chứng chỉ lập trình React/Node.js, Đồ án mẫu đạt loại Giỏi.`,
+                        "info",
+                      )
+                    }
                     className="text-xs text-blue-600 font-semibold hover:underline flex items-center gap-1 self-start sm:self-center"
                   >
                     <span>Xem hồ sơ năng lực chi tiết</span>
                     <span>&rarr;</span>
                   </button>
 
-                  {app.status === 'pending' && (
+                  {app.status === "pending" && (
                     <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-                      <button
-                        onClick={() => rejectApplicant(app.id)}
-                        className="px-4 py-2 rounded-xl border border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition flex items-center gap-1.5"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        <span>Từ chối</span>
-                      </button>
-                      <button
-                        onClick={() => acceptApplicant(app.id)}
-                        disabled={currentTeamCount >= 4}
-                        className={`px-5 py-2 rounded-xl text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5 ${
-                          currentTeamCount >= 4
-                            ? 'bg-slate-300 cursor-not-allowed'
-                            : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
-                        }`}
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        <span>Chấp nhận vào nhóm</span>
-                      </button>
+                      {/* CHỈ TRƯỞNG NHÓM mới hiển thị nút Chấp nhận/Từ chối */}
+                      {currentUser?.isGroupLeader ? (
+                        <>
+                          <button
+                            onClick={() => rejectApplicant(app.id)}
+                            className="px-4 py-2 rounded-xl border border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition flex items-center gap-1.5"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            <span>Từ chối</span>
+                          </button>
+                          <button
+                            onClick={() => acceptApplicant(app.id)}
+                            disabled={currentTeamCount >= 4}
+                            className={`px-5 py-2 rounded-xl text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5 ${
+                              currentTeamCount >= 4
+                                ? "bg-slate-300 cursor-not-allowed"
+                                : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20"
+                            }`}
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Chấp nhận vào nhóm</span>
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-slate-500 italic">
+                          Chờ Trưởng nhóm duyệt
+                        </span>
+                      )}
                     </div>
                   )}
 
-                  {app.status === 'accepted' && (
+                  {app.status === "accepted" && (
                     <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
                       <Check className="w-4 h-4 text-emerald-600" />
                       <span>Đã là thành viên chính thức</span>
                     </span>
                   )}
 
-                  {app.status === 'rejected' && (
-                    <span className="text-xs text-slate-400 font-medium">Đã từ chối hồ sơ</span>
+                  {app.status === "rejected" && (
+                    <span className="text-xs text-slate-400 font-medium">
+                      Đã từ chối hồ sơ
+                    </span>
                   )}
                 </div>
               </div>
@@ -240,7 +279,8 @@ export const ReviewApplicantsModal: React.FC = () => {
           <div className="flex items-center gap-2">
             <Info className="w-4 h-4 text-blue-500 shrink-0" />
             <span>
-              Lưu ý: Sau khi chấp nhận đủ 4 thành viên, hệ thống sẽ tự động đóng tuyển thành viên.
+              Lưu ý: Sau khi chấp nhận đủ 4 thành viên, hệ thống sẽ tự động đóng
+              tuyển thành viên.
             </span>
           </div>
           <button

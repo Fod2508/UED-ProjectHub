@@ -1,0 +1,152 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is a lecturer
+    function isLecturer() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'lecturer';
+    }
+    
+    // Check if user is a group leader
+    function isGroupLeader() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isGroupLeader == true;
+    }
+    
+    // Check if user belongs to the same team
+    function isSameTeam(teamId) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId;
+    }
+    
+    // Check if user is the document owner
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+    
+    match /users/{userId} {
+      // Anyone authenticated can read any user profile (for team collaboration)
+      allow read: if isAuthenticated();
+      
+      // Users can only update their own profile, lecturers can update any
+      allow create: if isAuthenticated();
+      allow update: if isOwner(userId) || isLecturer();
+      allow delete: if isLecturer(); // Only lecturers can delete users
+    }
+    
+    // ============================================
+    // TASKS COLLECTION
+    // ============================================
+    
+    match /tasks/{taskId} {
+      // Read: Team members + lecturers
+      allow read: if isAuthenticated() && (
+        isSameTeam(resource.data.groupId) || 
+        isLecturer()
+      );
+      
+      // Create: Any authenticated user (will be validated by groupId)
+      allow create: if isAuthenticated() && 
+                       isSameTeam(request.resource.data.groupId);
+      
+      // Update: Team members + lecturers
+      allow update: if isAuthenticated() && (
+        isSameTeam(resource.data.groupId) || 
+        isLecturer()
+      );
+      
+      // Delete: Group leaders + lecturers only
+      allow delete: if isAuthenticated() && (
+        (isSameTeam(resource.data.groupId) && isGroupLeader()) || 
+        isLecturer()
+      );
+    }
+    
+    // ============================================
+    // MILESTONES COLLECTION
+    // ============================================
+    
+    match /milestones/{milestoneId} {
+      // Read: All authenticated users (course-wide)
+      allow read: if isAuthenticated();
+      
+      // Write: Only lecturers can manage milestones
+      allow create, update, delete: if isLecturer();
+    }
+    
+    // ============================================
+    // APPLICATIONS COLLECTION
+    // ============================================
+    
+    match /applications/{applicationId} {
+      // Read: Applicant themselves + target group members + lecturers
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.applicantId) ||
+        isSameTeam(resource.data.targetGroupId) ||
+        isLecturer()
+      );
+      
+      // Create: Any authenticated user (applicant)
+      allow create: if isAuthenticated() && 
+                       isOwner(request.resource.data.applicantId);
+      
+      // Update: Group leaders (to accept/reject) + lecturers
+      allow update: if isAuthenticated() && (
+        (isSameTeam(resource.data.targetGroupId) && isGroupLeader()) ||
+        isLecturer()
+      );
+      
+      // Delete: Applicant themselves (withdraw) + lecturers
+      allow delete: if isAuthenticated() && (
+        isOwner(resource.data.applicantId) ||
+        isLecturer()
+      );
+    }
+    
+    // ============================================
+    // PEER REVIEWS COLLECTION
+    // ============================================
+    
+    match /peerReviews/{reviewId} {
+      // Read: Team members (anonymized view) + lecturers (full view)
+      allow read: if isAuthenticated() && (
+        isSameTeam(resource.data.groupId) ||
+        isLecturer()
+      );
+      
+      // Create/Update: Team members (reviewer) + lecturers
+      // Reviewer can only create/update their own reviews
+      allow create, update: if isAuthenticated() && (
+        (isSameTeam(request.resource.data.groupId) && 
+         isOwner(request.resource.data.reviewerId)) ||
+        isLecturer()
+      );
+      
+      // Delete: Only lecturers (to remove inappropriate reviews)
+      allow delete: if isLecturer();
+    }
+    
+    // ============================================
+    // ADDITIONAL SECURITY VALIDATIONS
+    // ============================================
+    
+    // Prevent creating documents with arbitrary IDs
+    // Prevent modifying critical fields (createdAt, createdBy, etc.)
+    
+  }
+}

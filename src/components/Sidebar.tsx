@@ -9,7 +9,11 @@ import {
   CalendarCheck,
   ClipboardCheck,
   BarChart3,
-  GraduationCap
+  GraduationCap,
+  ShieldCheck,
+  Crown,
+  User,
+  Settings,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -18,58 +22,166 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile }) => {
-  const { currentScreen, setCurrentScreen, applicants, groupReport } = useApp();
+  const { currentScreen, setCurrentScreen, applicants, groupReport, currentRole, currentUser, classGroups } = useApp();
 
   const pendingApplicantsCount = applicants.filter((a) => a.status === 'pending').length;
   const warningCount = groupReport.members.filter((m) => m.isWarning).length;
 
-  const navItems: {
+  const isLeader = currentUser?.isGroupLeader ?? false;
+  const isLecturer = currentRole === 'lecturer';
+
+  // Customize Navigation Items per Role
+  let navItems: {
     id: ScreenType;
     label: string;
+    sublabel?: string;
     icon: React.ReactNode;
-    badge?: number;
+    badge?: number | string;
     badgeColor?: string;
-  }[] = [
-    {
-      id: 'landing',
-      label: 'Trang chủ',
-      icon: <Home className="w-[18px] h-[18px]" />
-    },
-    {
-      id: 'dashboard',
-      label: 'Tổng quan',
-      icon: <LayoutDashboard className="w-[18px] h-[18px]" />
-    },
-    {
-      id: 'matchmaking',
-      label: 'Ghép nhóm (SCR_01)',
-      icon: <Users className="w-[18px] h-[18px]" />,
-      badge: pendingApplicantsCount > 0 ? pendingApplicantsCount : undefined,
-      badgeColor: 'bg-blue-500 text-white'
-    },
-    {
-      id: 'kanban',
-      label: 'Bảng tiến độ (SCR_03)',
-      icon: <KanbanSquare className="w-[18px] h-[18px]" />
-    },
-    {
-      id: 'milestones',
-      label: 'Cột mốc nộp bài (SCR_04)',
-      icon: <CalendarCheck className="w-[18px] h-[18px]" />
-    },
-    {
-      id: 'peer_review',
-      label: 'Đánh giá chéo (SCR_05)',
-      icon: <ClipboardCheck className="w-[18px] h-[18px]" />
-    },
-    {
-      id: 'report',
-      label: 'Báo cáo & Cảnh báo (SCR_06)',
-      icon: <BarChart3 className="w-[18px] h-[18px]" />,
-      badge: warningCount > 0 ? warningCount : undefined,
-      badgeColor: 'bg-rose-500 text-white'
-    }
-  ];
+  }[] = [];
+
+  if (isLecturer) {
+    navItems = [
+      {
+        id: 'landing',
+        label: 'Trang chủ Hệ thống',
+        icon: <Home className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'dashboard',
+        label: 'Tổng quan Môn học',
+        sublabel: 'Dashboard toàn khóa',
+        icon: <LayoutDashboard className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'milestones',
+        label: 'Đề cương & Cột mốc',
+        sublabel: 'Khung điểm 100%',
+        icon: <CalendarCheck className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'matchmaking',
+        label: 'Quản lý Nhóm & Đề tài',
+        sublabel: 'Danh sách các nhóm',
+        icon: <Users className="w-[18px] h-[18px]" />,
+        badge: classGroups.length,
+        badgeColor: 'bg-indigo-600 text-white'
+      },
+      {
+        id: 'kanban',
+        label: 'Giám sát Bảng tiến độ',
+        sublabel: 'Theo dõi Sprint',
+        icon: <KanbanSquare className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'peer_review',
+        label: 'Quản lý Đánh giá chéo',
+        sublabel: 'Cấu hình & Gia hạn',
+        icon: <ClipboardCheck className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'report',
+        label: 'Báo cáo & Thẩm định',
+        sublabel: 'Phát hiện Free-rider',
+        icon: <BarChart3 className="w-[18px] h-[18px]" />,
+        badge: warningCount > 0 ? warningCount : undefined,
+        badgeColor: 'bg-rose-500 text-white'
+      }
+    ];
+  } else if (isLeader) {
+    // Sinh viên - Trưởng nhóm
+    navItems = [
+      {
+        id: 'landing',
+        label: 'Trang chủ',
+        icon: <Home className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'dashboard',
+        label: 'Tổng quan Nhóm đồ án',
+        sublabel: currentUser?.teamName || 'Nhóm của tôi',
+        icon: <LayoutDashboard className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'matchmaking',
+        label: 'Quản lý Nhóm & Duyệt TV',
+        sublabel: 'Xét duyệt hồ sơ SV',
+        icon: <Users className="w-[18px] h-[18px]" />,
+        badge: pendingApplicantsCount > 0 ? pendingApplicantsCount : undefined,
+        badgeColor: 'bg-emerald-600 text-white animate-pulse'
+      },
+      {
+        id: 'kanban',
+        label: 'Bảng tiến độ Kanban',
+        sublabel: 'Giao việc & Duyệt task',
+        icon: <KanbanSquare className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'milestones',
+        label: 'Cột mốc & Sprint nội bộ',
+        sublabel: 'Lập kế hoạch nhóm',
+        icon: <CalendarCheck className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'peer_review',
+        label: 'Đánh giá chéo thành viên',
+        sublabel: 'Bỏ phiếu ẩn danh',
+        icon: <ClipboardCheck className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'report',
+        label: 'Báo cáo Đóng góp của tôi',
+        sublabel: 'Xem điểm & Giải trình',
+        icon: <BarChart3 className="w-[18px] h-[18px]" />,
+        badge: warningCount > 0 ? warningCount : undefined,
+        badgeColor: 'bg-rose-500 text-white'
+      }
+    ];
+  } else {
+    // Sinh viên - Thành viên
+    navItems = [
+      {
+        id: 'landing',
+        label: 'Trang chủ',
+        icon: <Home className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'dashboard',
+        label: 'Tổng quan Đồ án của tôi',
+        icon: <LayoutDashboard className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'matchmaking',
+        label: currentUser?.teamId ? 'Thông tin Nhóm của tôi' : 'Tìm nhóm & Ghép đôi',
+        sublabel: currentUser?.teamId ? 'Thành viên nhóm' : 'So khớp kỹ năng & Lịch rảnh',
+        icon: <Users className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'kanban',
+        label: 'Bảng tiến độ Kanban',
+        sublabel: 'Tasks được phân công',
+        icon: <KanbanSquare className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'milestones',
+        label: 'Lịch nộp bài học phần',
+        sublabel: 'Theo dõi Deadline',
+        icon: <CalendarCheck className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'peer_review',
+        label: 'Đánh giá chéo thành viên',
+        sublabel: 'Bỏ phiếu ẩn danh',
+        icon: <ClipboardCheck className="w-[18px] h-[18px]" />
+      },
+      {
+        id: 'report',
+        label: 'Điểm đóng góp của tôi',
+        sublabel: 'Minh bạch & Bảo mật',
+        icon: <BarChart3 className="w-[18px] h-[18px]" />
+      }
+    ];
+  }
 
   const handleNavClick = (screen: ScreenType) => {
     setCurrentScreen(screen);
@@ -99,11 +211,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
               className="flex items-center gap-3 text-left group"
             >
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-700 to-blue-500 flex items-center justify-center text-white font-extrabold text-sm shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
-                UD
+                UED
               </div>
               <div className="flex flex-col">
                 <span className="font-extrabold text-[15px] tracking-tight text-slate-900 leading-tight">
-                  UD-DN <span className="text-blue-600">ProjectHub</span>
+                  UED <span className="text-blue-600">ProjectHub</span>
                 </span>
                 <span className="text-[10px] text-slate-400 font-medium tracking-wide">
                   Khoa CNTT • ĐH Sư phạm
@@ -112,11 +224,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
             </button>
           </div>
 
-          {/* Section Category */}
-          <div className="px-5 pt-4 pb-2">
-            <span className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-              Học phần Đồ án Môn học
+          {/* Section Category Title tailored by Role */}
+          <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+            <span className="text-[10px] font-bold tracking-wider uppercase text-slate-400">
+              {isLecturer
+                ? 'Quản trị Đồ án (Giảng viên)'
+                : isLeader
+                ? 'Đồ án Nhóm (Trưởng nhóm)'
+                : 'Đồ án Nhóm (Thành viên)'}
             </span>
+            {isLecturer ? (
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                GV
+              </span>
+            ) : isLeader ? (
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Leader
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                Member
+              </span>
+            )}
           </div>
 
           {/* Nav items list */}
@@ -127,9 +256,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id)}
-                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs sm:text-[13px] font-medium transition-all ${
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-medium transition-all text-left ${
                     isActive
-                      ? 'bg-blue-600 text-white font-semibold shadow-xs shadow-blue-600/30'
+                      ? isLecturer
+                        ? 'bg-indigo-600 text-white font-semibold shadow-xs shadow-indigo-600/30'
+                        : isLeader
+                        ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/30'
+                        : 'bg-blue-600 text-white font-semibold shadow-xs shadow-blue-600/30'
                       : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
                   }`}
                 >
@@ -137,12 +270,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
                     <span className={isActive ? 'text-white' : 'text-slate-500'}>
                       {item.icon}
                     </span>
-                    <span className="truncate">{item.label}</span>
+                    <div className="flex flex-col truncate">
+                      <span className="truncate">{item.label}</span>
+                      {item.sublabel && (
+                        <span
+                          className={`text-[10px] font-normal truncate ${
+                            isActive ? 'text-white/80' : 'text-slate-400'
+                          }`}
+                        >
+                          {item.sublabel}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {item.badge !== undefined && (
                     <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 ${
                         item.badgeColor || 'bg-slate-200 text-slate-700'
                       }`}
                     >
@@ -155,14 +299,43 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
           </nav>
         </div>
 
-        {/* Bottom Academic Year Card */}
-        <div className="p-3 m-3 rounded-xl bg-blue-50/70 border border-blue-100 flex flex-col gap-1">
-          <div className="flex items-center gap-1.5 text-blue-700 font-semibold text-xs">
-            <GraduationCap className="w-4 h-4 text-blue-600" />
-            <span>Niên khóa 2026 - 2027</span>
+        {/* Bottom Role-Aware Status Card */}
+        <div className="p-3 m-3 rounded-xl border flex flex-col gap-1.5 transition-colors ${
+          isLecturer
+            ? 'bg-indigo-50/80 border-indigo-100 text-indigo-900'
+            : isLeader
+            ? 'bg-emerald-50/80 border-emerald-100 text-emerald-900'
+            : 'bg-blue-50/80 border-blue-100 text-blue-900'
+        }">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 font-bold text-xs">
+              {isLecturer ? (
+                <ShieldCheck className="w-4 h-4 text-indigo-600" />
+              ) : isLeader ? (
+                <Crown className="w-4 h-4 text-emerald-600" />
+              ) : (
+                <User className="w-4 h-4 text-blue-600" />
+              )}
+              <span className="truncate">
+                {isLecturer
+                  ? 'Giảng viên hướng dẫn'
+                  : isLeader
+                  ? 'Trưởng nhóm'
+                  : 'Thành viên nhóm'}
+              </span>
+            </div>
+            <span className="text-[10px] font-medium text-slate-500">
+              HK1 2026-27
+            </span>
           </div>
-          <p className="text-[11px] text-slate-500 leading-snug">
-            Cổng thông tin đồ án chuyên ngành &amp; đánh giá năng lực cộng tác.
+
+          <p className="text-[11px] text-slate-600 leading-snug truncate">
+            {currentUser?.name || (isLecturer ? 'TS. Trần Văn B' : 'Nguyễn Văn A')}
+            {currentUser?.teamName && !isLecturer && (
+              <span className="text-slate-500 block truncate text-[10px]">
+                {currentUser.teamName}
+              </span>
+            )}
           </p>
         </div>
       </aside>

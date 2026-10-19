@@ -1,0 +1,7 @@
+{
+  "status": "healthy",
+  "service": "UED-ProjectHub",
+  "institution": "Khoa CNTT - Truong DH Su pham, DH Da Nang",
+  "type": "static-health-check",
+  "message": "UED-ProjectHub is online and ready!"
+}
