@@ -12,7 +12,6 @@ import { KanbanView } from "./views/KanbanView.tsx";
 import { MilestonesView } from "./views/MilestonesView.tsx";
 import { PeerReviewView } from "./views/PeerReviewView.tsx";
 import { ContributionReportView } from "./views/ContributionReportView.tsx";
-import { DataMigrationPrompt } from "./components/DataMigrationPrompt.tsx";
 
 const AppContent: React.FC = () => {
   const { currentScreen, authLoading } = useApp();
@@ -53,9 +52,6 @@ const AppContent: React.FC = () => {
   // Dashboard / App Workspace layout with left Sidebar and fixed Navbar
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex">
-      {/* Data Migration Prompt (only shows if no data exists) */}
-      <DataMigrationPrompt />
-
       {/* Sidebar */}
       <Sidebar
         isOpenMobile={isMobileMenuOpen}

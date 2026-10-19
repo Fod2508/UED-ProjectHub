@@ -54,14 +54,16 @@ export const ContributionReportView: React.FC = () => {
     approveAllScores();
   };
 
-  // Find current student's own data (with safe fallback to first member)
-  const myMemberData =
-    groupReport.members.find((m) => m.name === currentUser?.name) ||
-    groupReport.members[0];
+  // Find current student's own data (strict match by name or code)
+  const myMemberData = groupReport.members.find(
+    (m) =>
+      m.name.toLowerCase() === currentUser?.name?.toLowerCase() ||
+      (currentUser?.code && m.studentId === currentUser.code),
+  );
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12">
-      {/* STUDENT VIEW - Only see own contribution score */}
+      {/* STUDENT VIEW - With completed evaluation */}
       {currentRole === "student" && myMemberData && (
         <>
           <div className="space-y-1">
@@ -263,6 +265,90 @@ export const ContributionReportView: React.FC = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* STUDENT VIEW - Newly created account or no evaluations yet */}
+      {currentRole === "student" && !myMemberData && (
+        <div className="space-y-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                <User className="w-4 h-4" />
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+                Điểm đóng góp của tôi
+              </h1>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500">
+              Điểm đóng góp từ đánh giá chéo ẩn danh và tỷ lệ hoàn thành công việc.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 space-y-5">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-sm text-white">
+                  {currentUser?.avatarText || "SV"}
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    {currentUser?.name || "Sinh viên"}
+                  </h2>
+                  <span className="text-xs text-slate-400">
+                    {currentUser?.code || "Mã SV"} • {currentUser?.teamName || "Chưa tham gia nhóm"}
+                  </span>
+                </div>
+              </div>
+              <span className="text-xs text-slate-500">
+                Trạng thái: <strong className="text-blue-700">Đang thực hiện đồ án</strong>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-slate-50/70 rounded-xl p-4 space-y-2">
+                <span className="text-xs font-semibold text-slate-500 uppercase">
+                  Tỷ lệ hoàn thành việc
+                </span>
+                <div className="text-2xl font-extrabold text-slate-900 tabular-nums">
+                  --%
+                </div>
+                <p className="text-xs text-slate-500">
+                  Chưa có công việc được duyệt
+                </p>
+              </div>
+
+              <div className="bg-slate-50/70 rounded-xl p-4 space-y-2">
+                <span className="text-xs font-semibold text-slate-500 uppercase">
+                  Điểm đánh giá chéo TB
+                </span>
+                <div className="text-2xl font-extrabold text-slate-400 tabular-nums">
+                  --
+                </div>
+                <p className="text-xs text-slate-500">
+                  Chưa mở phiên đánh giá chéo
+                </p>
+              </div>
+
+              <div className="bg-slate-100 border border-slate-200 rounded-xl p-4 space-y-2">
+                <span className="text-xs font-semibold uppercase text-slate-700">
+                  Điểm đóng góp
+                </span>
+                <div className="text-3xl font-extrabold text-slate-500 tabular-nums">
+                  --
+                </div>
+                <p className="text-xs text-slate-500">
+                  Chưa có dữ liệu tổng hợp
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-900 leading-relaxed">
+              <p>
+                <strong>Thông báo:</strong> Tài khoản của bạn hiện chưa có phiên đánh giá chéo nào được tổng hợp. Khi Giảng viên kết thúc Cột mốc nộp bài và các thành viên trong nhóm hoàn tất đánh giá chéo ẩn danh, điểm đóng góp chính thức của bạn sẽ được hiển thị tại đây.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* LECTURER VIEW - Full control and oversight */}

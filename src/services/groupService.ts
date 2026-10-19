@@ -9,6 +9,7 @@ import {
   where,
   Timestamp,
   DocumentData,
+  onSnapshot,
 } from "firebase/firestore";
 import { db } from "../config/firebase.ts";
 
@@ -205,6 +206,35 @@ class GroupService {
       console.error("Error getting group:", error);
       return null;
     }
+  }
+
+  /**
+   * Get all groups from Firestore
+   */
+  async getAllGroups(): Promise<Group[]> {
+    try {
+      const snap = await getDocs(this.groupsCollection);
+      return snap.docs.map((d) => d.data() as Group);
+    } catch (error) {
+      console.warn("Could not get groups from Firestore:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Subscribe to real-time updates for all groups
+   */
+  subscribeToGroups(callback: (groups: Group[]) => void): () => void {
+    return onSnapshot(
+      this.groupsCollection,
+      (snapshot) => {
+        const groups = snapshot.docs.map((d) => d.data() as Group);
+        callback(groups);
+      },
+      (error) => {
+        console.warn("Error subscribing to groups:", error);
+      },
+    );
   }
 
   /**

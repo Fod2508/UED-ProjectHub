@@ -182,7 +182,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [authLoading, setAuthLoading] = useState(true);
   const [currentRole, setCurrentRole] = useState<UserRole>("student");
   const [demoPersona, setDemoPersona] = useState<DemoPersona>("leader");
-  const [classGroups, setClassGroups] = useState<ClassGroupSummary[]>(DEMO_CLASS_GROUPS);
+  const [classGroups, setClassGroups] = useState<ClassGroupSummary[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY + "_class_groups");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn("Could not load class_groups from storage", e);
+    }
+    return DEMO_CLASS_GROUPS;
+  });
 
   // Load saved state or use initial
   const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
@@ -380,6 +391,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       unsubscribe();
     };
   }, [currentUser]); // Re-run when currentUser changes (login/logout)
+
+  // Sync groups from Firestore so any student-created group appears for all (including Lecturer)
+  useEffect(() => {
+    const unsubscribe = groupService.subscribeToGroups((firestoreGroups) => {
+      if (firestoreGroups && firestoreGroups.length > 0) {
+        const mapped: ClassGroupSummary[] = firestoreGroups.map((g) => ({
+          id: g.id,
+          name: g.name,
+          topic: g.projectTopic || "Đang đăng ký đề tài đồ án",
+          leaderName: g.createdBy ? "Trưởng nhóm" : "Chưa có",
+          leaderAvatar: "TN",
+          leaderEmail: "leader@ued.udn.vn",
+          memberCount: g.currentMemberCount || g.memberIds?.length || 1,
+          maxMembers: g.maxMembers || 4,
+          status:
+            (g.currentMemberCount || g.memberIds?.length || 1) >= (g.maxMembers || 4)
+              ? "Đủ thành viên"
+              : "Đang tuyển thành viên",
+          missingSkills: g.skillsNeeded || ["Backend", "Frontend"],
+          members: (g.memberIds || []).map((mid) => ({
+            name: mid === g.createdBy ? "Trưởng nhóm" : "Thành viên",
+            role: mid === g.createdBy ? "Trưởng nhóm" : "Thành viên",
+            avatar: "SV",
+          })),
+          kanbanProgress: 0,
+        }));
+
+        setClassGroups((prev) => {
+          const merged = [...mapped];
+          for (const item of prev) {
+            if (!merged.some((m) => m.id === item.id)) {
+              merged.push(item);
+            }
+          }
+          try {
+            localStorage.setItem(STORAGE_KEY + "_class_groups", JSON.stringify(merged));
+          } catch (e) {
+            console.warn("Storage write error", e);
+          }
+          return merged;
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const [scheduleMatrix, setScheduleMatrix] = useState<FreeScheduleMatrix>(
     () => {
@@ -828,6 +885,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       if (result.success && result.groupId) {
         // Get the created group to extract the group code
         const group = await groupService.getGroup(result.groupId);
+        const groupName = group?.name || `Nhóm ${group?.code || "mới"}`;
 
         // Cập nhật state currentUser ngay lập tức
         setCurrentUser((prev) =>
@@ -835,11 +893,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
             ? {
                 ...prev,
                 teamId: result.groupId,
-                teamName: group?.name || "Nhóm mới",
+                teamName: groupName,
                 isGroupLeader: true,
               }
             : null,
         );
+
+        // Thêm ngay nhóm mới vào classGroups để Giảng viên và lớp cùng nhìn thấy
+        const newGroupSummary: ClassGroupSummary = {
+          id: result.groupId,
+          name: groupName,
+          topic: "Đang đăng ký đề tài đồ án",
+          leaderName: currentUser.name,
+          leaderAvatar: currentUser.avatarText || "SV",
+          leaderEmail: `${currentUser.code || "sv"}@ued.udn.vn`,
+          memberCount: 1,
+          maxMembers: 4,
+          status: "Đang tuyển thành viên",
+          missingSkills: userSkills.length > 0 ? ["Backend", "Kiểm thử"] : ["Frontend", "Backend"],
+          members: [
+            {
+              name: currentUser.name,
+              role: "Trưởng nhóm",
+              avatar: currentUser.avatarText || "SV",
+            },
+          ],
+          kanbanProgress: 0,
+        };
+
+        setClassGroups((prev) => {
+          const updated = [newGroupSummary, ...prev.filter((g) => g.id !== result.groupId)];
+          try {
+            localStorage.setItem(STORAGE_KEY + "_class_groups", JSON.stringify(updated));
+          } catch (e) {
+            console.warn("Storage error", e);
+          }
+          return updated;
+        });
 
         showToast(
           `Đã tạo nhóm thành công! Mã nhóm: ${group?.code}. Bạn đã chính thức trở thành Trưởng nhóm!`,
@@ -865,6 +955,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
               }
             : null,
         );
+
+        const newGroupSummary: ClassGroupSummary = {
+          id: localGroupId,
+          name: localGroupName,
+          topic: "Đang đăng ký đề tài đồ án",
+          leaderName: currentUser.name,
+          leaderAvatar: currentUser.avatarText || "SV",
+          leaderEmail: `${currentUser.code || "sv"}@ued.udn.vn`,
+          memberCount: 1,
+          maxMembers: 4,
+          status: "Đang tuyển thành viên",
+          missingSkills: ["Frontend", "Backend"],
+          members: [
+            {
+              name: currentUser.name,
+              role: "Trưởng nhóm",
+              avatar: currentUser.avatarText || "SV",
+            },
+          ],
+          kanbanProgress: 0,
+        };
+
+        setClassGroups((prev) => {
+          const updated = [newGroupSummary, ...prev.filter((g) => g.id !== localGroupId)];
+          try {
+            localStorage.setItem(STORAGE_KEY + "_class_groups", JSON.stringify(updated));
+          } catch (e) {
+            console.warn("Storage error", e);
+          }
+          return updated;
+        });
+
         showToast(
           `Đã tạo nhóm thành công! Mã nhóm: NHM-${randomNum}. Bạn đã chính thức trở thành Trưởng nhóm!`,
           "success",
@@ -890,6 +1012,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
             }
           : null,
       );
+
+      const newGroupSummary: ClassGroupSummary = {
+        id: localGroupId,
+        name: localGroupName,
+        topic: "Đang đăng ký đề tài đồ án",
+        leaderName: currentUser.name,
+        leaderAvatar: currentUser.avatarText || "SV",
+        leaderEmail: `${currentUser.code || "sv"}@ued.udn.vn`,
+        memberCount: 1,
+        maxMembers: 4,
+        status: "Đang tuyển thành viên",
+        missingSkills: ["Frontend", "Backend"],
+        members: [
+          {
+            name: currentUser.name,
+            role: "Trưởng nhóm",
+            avatar: currentUser.avatarText || "SV",
+          },
+        ],
+        kanbanProgress: 0,
+      };
+
+      setClassGroups((prev) => {
+        const updated = [newGroupSummary, ...prev.filter((g) => g.id !== localGroupId)];
+        try {
+          localStorage.setItem(STORAGE_KEY + "_class_groups", JSON.stringify(updated));
+        } catch (e) {
+          console.warn("Storage error", e);
+        }
+        return updated;
+      });
+
       showToast(
         `Đã tạo nhóm thành công! Mã nhóm: NHM-${randomNum}. Bạn đã chính thức trở thành Trưởng nhóm!`,
         "success",

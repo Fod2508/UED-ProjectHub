@@ -29,6 +29,7 @@ export const MilestonesView: React.FC = () => {
     currentRole,
     currentUser,
     triggerPeerReview,
+    classGroups,
   } = useApp();
 
   const { isValid, totalWeight } = validateMilestonesWeight(milestones);
@@ -67,7 +68,7 @@ export const MilestonesView: React.FC = () => {
 
   const handleViewSubmission = (milestoneName: string) => {
     showToast(
-      `Bài nộp cho "${milestoneName}": 12/12 nhóm sinh viên đã nộp đề cương & báo cáo khảo sát. Điểm trung bình: 8.8.`,
+      `Bài nộp cho "${milestoneName}": ${classGroups.length}/${classGroups.length} nhóm sinh viên đã nộp đề cương & sản phẩm bàn giao.`,
       "info",
     );
   };

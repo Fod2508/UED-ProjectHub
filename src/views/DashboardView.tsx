@@ -557,51 +557,107 @@ export const DashboardView: React.FC = () => {
       {/* 5. Team Members Contribution - Only show if user has a group */}
       {currentUser?.teamId && (
         <div className="bg-white p-6 rounded-2xl">
-          <h3 className="text-lg font-bold text-slate-900 mb-5">
-            Đóng góp thành viên
-          </h3>
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-lg font-bold text-slate-900">
+              Đóng góp thành viên
+            </h3>
+            {currentUser.teamId !== "nhom_04" && (
+              <span className="text-xs text-slate-500 font-medium">
+                Chưa mở phiên đánh giá chéo
+              </span>
+            )}
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {groupReport.members.map((m) => (
-              <div
-                key={m.id}
-                className={`p-4 rounded-xl transition ${
-                  m.isWarning
-                    ? "bg-rose-50 border border-rose-200"
-                    : "bg-slate-50"
-                }`}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold ${
-                      m.isWarning ? "bg-rose-600" : "bg-blue-600"
-                    }`}
-                  >
-                    {m.avatarText}
+          {currentUser.teamId === "nhom_04" ? (
+            /* Dữ liệu mẫu đánh giá của Nhóm 04 */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {groupReport.members.map((m) => (
+                <div
+                  key={m.id}
+                  className={`p-4 rounded-xl transition ${
+                    m.isWarning
+                      ? "bg-rose-50 border border-rose-200"
+                      : "bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold ${
+                        m.isWarning ? "bg-rose-600" : "bg-blue-600"
+                      }`}
+                    >
+                      {m.avatarText}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-bold text-slate-900 truncate">
+                        {m.name}
+                      </h4>
+                      <span className="text-xs text-slate-500">
+                        {m.studentId}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-slate-900 truncate">
-                      {m.name}
-                    </h4>
-                    <span className="text-xs text-slate-500">
-                      {m.studentId}
+                  <p className="text-xs text-slate-600 mb-3 line-clamp-1">
+                    {m.roleInTeam}
+                  </p>
+                  <div className="flex items-center justify-between pt-3 border-t">
+                    <span className="text-xs text-slate-500">Đóng góp</span>
+                    <span
+                      className={`text-base font-bold ${m.isWarning ? "text-rose-600" : "text-blue-600"}`}
+                    >
+                      {m.contributionScore}%
                     </span>
                   </div>
                 </div>
-                <p className="text-xs text-slate-600 mb-3 line-clamp-1">
-                  {m.roleInTeam}
-                </p>
-                <div className="flex items-center justify-between pt-3 border-t">
-                  <span className="text-xs text-slate-500">Đóng góp</span>
-                  <span
-                    className={`text-base font-bold ${m.isWarning ? "text-rose-600" : "text-blue-600"}`}
-                  >
-                    {m.contributionScore}%
-                  </span>
-                </div>
+              ))}
+            </div>
+          ) : (
+            /* Dữ liệu thực tế của Nhóm mới tạo hoặc nhóm khác */
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {(groupMembers.length > 0
+                  ? groupMembers
+                  : [
+                      {
+                        id: currentUser.id,
+                        name: currentUser.name,
+                        avatarText: currentUser.avatarText || "SV",
+                        skills: [],
+                        isLeader: currentUser.isGroupLeader || true,
+                      },
+                    ]
+                ).map((m) => (
+                  <div key={m.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white text-sm font-bold">
+                        {m.avatarText}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-bold text-slate-900 truncate">
+                          {m.name}
+                        </h4>
+                        <span className="text-xs text-slate-500">
+                          {m.isLeader ? "Trưởng nhóm" : "Thành viên"}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-600 mb-3 line-clamp-1">
+                      {m.isLeader ? "Quản lý nhóm đồ án" : "Thành viên đồ án"}
+                    </p>
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-200/60">
+                      <span className="text-xs text-slate-500">Đóng góp</span>
+                      <span className="text-sm font-bold text-slate-500">
+                        Chưa đánh giá
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+              <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                💡 Điểm số đóng góp sẽ được hệ thống tự động tổng hợp sau khi Giảng viên kết thúc Cột mốc nộp bài và các thành viên trong nhóm hoàn tất đánh giá chéo.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

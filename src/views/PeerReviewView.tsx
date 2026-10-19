@@ -27,6 +27,7 @@ export const PeerReviewView: React.FC = () => {
     showToast,
     setCurrentScreen,
     currentRole,
+    currentUser,
     criteriaWeights,
     isCriteriaConfigOpen,
     setIsCriteriaConfigOpen,
@@ -366,6 +367,50 @@ export const PeerReviewView: React.FC = () => {
             }}
           />
         )}
+      </div>
+    );
+  }
+
+  if (currentRole === "student" && !currentUser?.teamId) {
+    return (
+      <div className="max-w-2xl mx-auto my-8 bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-4">
+        <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+          <Users className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900">
+          Chưa tham gia nhóm đồ án
+        </h2>
+        <p className="text-sm text-slate-600 max-w-md mx-auto">
+          Bạn cần tham gia hoặc tạo một nhóm đồ án trước khi có thể thực hiện đánh giá chéo các thành viên.
+        </p>
+        <button
+          onClick={() => setCurrentScreen("matchmaking")}
+          className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition cursor-pointer"
+        >
+          Tìm nhóm hoặc Tạo nhóm ngay
+        </button>
+      </div>
+    );
+  }
+
+  if (currentRole === "student" && peerReviews.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto my-8 bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-4">
+        <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+          <Clock className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900">
+          Chưa mở phiên đánh giá chéo
+        </h2>
+        <p className="text-sm text-slate-600 max-w-md mx-auto">
+          Hiện tại Cột mốc nộp bài đang trong giai đoạn thực hiện. Phiên đánh giá chéo sẽ được kích hoạt tự động khi Giảng viên kết thúc Cột mốc nộp bài.
+        </p>
+        <button
+          onClick={() => setCurrentScreen("kanban")}
+          className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition cursor-pointer"
+        >
+          Xem Tiến độ công việc
+        </button>
       </div>
     );
   }
