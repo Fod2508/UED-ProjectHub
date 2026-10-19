@@ -44,45 +44,39 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
     navItems = [
       {
         id: 'landing',
-        label: 'Trang chủ Hệ thống',
+        label: 'Trang chủ',
         icon: <Home className="w-[18px] h-[18px]" />
       },
       {
         id: 'dashboard',
         label: 'Tổng quan Môn học',
-        sublabel: 'Dashboard toàn khóa',
         icon: <LayoutDashboard className="w-[18px] h-[18px]" />
-      },
-      {
-        id: 'milestones',
-        label: 'Đề cương & Cột mốc',
-        sublabel: 'Khung điểm 100%',
-        icon: <CalendarCheck className="w-[18px] h-[18px]" />
       },
       {
         id: 'matchmaking',
         label: 'Quản lý Nhóm & Đề tài',
-        sublabel: 'Danh sách các nhóm',
         icon: <Users className="w-[18px] h-[18px]" />,
         badge: classGroups.length,
         badgeColor: 'bg-indigo-600 text-white'
       },
       {
         id: 'kanban',
-        label: 'Giám sát Bảng tiến độ',
-        sublabel: 'Theo dõi Sprint',
+        label: 'Bảng tiến độ Kanban',
         icon: <KanbanSquare className="w-[18px] h-[18px]" />
       },
       {
+        id: 'milestones',
+        label: 'Cột mốc & Đề cương',
+        icon: <CalendarCheck className="w-[18px] h-[18px]" />
+      },
+      {
         id: 'peer_review',
-        label: 'Quản lý Đánh giá chéo',
-        sublabel: 'Cấu hình & Gia hạn',
+        label: 'Đánh giá chéo thành viên',
         icon: <ClipboardCheck className="w-[18px] h-[18px]" />
       },
       {
         id: 'report',
         label: 'Báo cáo & Thẩm định',
-        sublabel: 'Phát hiện Free-rider',
         icon: <BarChart3 className="w-[18px] h-[18px]" />,
         badge: warningCount > 0 ? warningCount : undefined,
         badgeColor: 'bg-rose-500 text-white'
@@ -300,13 +294,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
         </div>
 
         {/* Bottom Role-Aware Status Card */}
-        <div className="p-3 m-3 rounded-xl border flex flex-col gap-1.5 transition-colors ${
-          isLecturer
-            ? 'bg-indigo-50/80 border-indigo-100 text-indigo-900'
-            : isLeader
-            ? 'bg-emerald-50/80 border-emerald-100 text-emerald-900'
-            : 'bg-blue-50/80 border-blue-100 text-blue-900'
-        }">
+        <div
+          className={`p-3 m-3 rounded-xl border flex flex-col gap-1.5 transition-colors ${
+            isLecturer
+              ? 'bg-indigo-50/80 border-indigo-100 text-indigo-900'
+              : isLeader
+              ? 'bg-emerald-50/80 border-emerald-100 text-emerald-900'
+              : 'bg-blue-50/80 border-blue-100 text-blue-900'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 font-bold text-xs">
               {isLecturer ? (

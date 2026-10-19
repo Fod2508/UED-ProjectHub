@@ -5,14 +5,12 @@ import {
   Bell,
   HelpCircle,
   Menu,
-  RotateCcw,
   UserCheck,
   Calendar,
   ShieldCheck,
   LogOut,
   LogIn,
   Crown,
-  User,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -25,9 +23,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
     setCurrentScreen,
     currentRole,
     currentUser,
-    demoPersona,
-    switchDemoPersona,
-    resetToDemoData,
     logout,
     unreadNotificationCount,
     isNotificationOpen,
@@ -36,13 +31,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
 
   const isLeader = currentUser?.isGroupLeader ?? false;
   const isLecturer = currentRole === "lecturer";
-
-  // Check if current user is an authenticated Firebase user (not one of the 3 built-in demo users)
-  const isDemoAccount =
-    !currentUser ||
-    currentUser.id === "user_student_1" ||
-    currentUser.id === "user_student_2" ||
-    currentUser.id === "user_lecturer_1";
 
   const screenTitles: Record<string, string> = {
     landing: "Trang chủ Hệ thống",
@@ -96,90 +84,35 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
         </div>
       </div>
 
-      {/* Right: Actions, Role Switcher, Profile */}
+      {/* Right: Actions, Role Badge, Profile */}
       <div className="flex items-center gap-2.5 sm:gap-4">
-        {/* Reset button for demo convenience */}
-        <button
-          onClick={resetToDemoData}
-          title="Khôi phục dữ liệu mẫu ban đầu để thử nghiệm lại"
-          className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-800 text-xs font-medium transition"
-        >
-          <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
-          <span>Reset Demo</span>
-        </button>
-
-        {/* ROLE SELECTOR / BADGE */}
-        {isDemoAccount ? (
-          /* Demo Mode Switcher: 3 Clear Personas */
-          <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-medium">
-            <button
-              onClick={() => switchDemoPersona("lecturer")}
-              title="Chuyển sang vai trò Giảng viên (TS. Trần Văn B)"
-              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
-                demoPersona === "lecturer"
-                  ? "bg-indigo-600 text-white shadow-xs font-semibold"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
+        {/* Role Badge */}
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+              isLecturer
+                ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                : isLeader
+                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                : "bg-blue-50 text-blue-700 border border-blue-200"
+            }`}
+          >
+            {isLecturer ? (
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Giảng viên</span>
-            </button>
-
-            <button
-              onClick={() => switchDemoPersona("leader")}
-              title="Chuyển sang vai trò Sinh viên - Trưởng nhóm (Nguyễn Văn A)"
-              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
-                demoPersona === "leader"
-                  ? "bg-emerald-600 text-white shadow-xs font-semibold"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
+            ) : isLeader ? (
               <Crown className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Trưởng nhóm</span>
-            </button>
-
-            <button
-              onClick={() => switchDemoPersona("member")}
-              title="Chuyển sang vai trò Sinh viên - Thành viên (Lê Văn Cúc)"
-              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
-                demoPersona === "member"
-                  ? "bg-blue-600 text-white shadow-xs font-semibold"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Thành viên</span>
-            </button>
-          </div>
-        ) : (
-          /* Authenticated User Role Badge */
-          <div className="flex items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold ${
-                isLecturer
-                  ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                  : isLeader
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                  : "bg-blue-50 text-blue-700 border border-blue-200"
-              }`}
-            >
-              {isLecturer ? (
-                <ShieldCheck className="w-3.5 h-3.5" />
-              ) : isLeader ? (
-                <Crown className="w-3.5 h-3.5" />
-              ) : (
-                <UserCheck className="w-3.5 h-3.5" />
-              )}
-              <span>
-                {isLecturer
-                  ? "Giảng viên"
-                  : isLeader
-                  ? "Trưởng nhóm"
-                  : "Thành viên"}
-              </span>
+            ) : (
+              <UserCheck className="w-3.5 h-3.5" />
+            )}
+            <span>
+              {isLecturer
+                ? "Giảng viên"
+                : isLeader
+                ? "Trưởng nhóm"
+                : "Thành viên"}
             </span>
-          </div>
-        )}
+          </span>
+        </div>
 
         {/* Icons */}
         <div className="flex items-center gap-1">
