@@ -22,7 +22,7 @@ npm install
 Copy Firebase credentials vào file `.env` (đã tạo sẵn):
 
 ```env
-VITE_FIREBASE_API_KEY="AIzaSyDKSh9n7bGNMD8dyT7QMfQg23o9EeHEflo"
+VITE_FIREBASE_API_KEY="YOUR_FIREBASE_API_KEY_HERE"
 VITE_FIREBASE_AUTH_DOMAIN="ued-projecthub.firebaseapp.com"
 VITE_FIREBASE_PROJECT_ID="ued-projecthub"
 # ... (see .env file)

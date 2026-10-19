@@ -78,7 +78,7 @@ export const db = getFirestore(app);
 ### 2. `.env` (local development)
 
 ```env
-VITE_FIREBASE_API_KEY="AIzaSyDKSh9n7bGNMD8dyT7QMfQg23o9EeHEflo"
+VITE_FIREBASE_API_KEY="YOUR_FIREBASE_API_KEY_HERE"
 VITE_FIREBASE_AUTH_DOMAIN="ued-projecthub.firebaseapp.com"
 VITE_FIREBASE_PROJECT_ID="ued-projecthub"
 VITE_FIREBASE_STORAGE_BUCKET="ued-projecthub.firebasestorage.app"
