@@ -109,7 +109,7 @@ export const MilestonesView: React.FC = () => {
               onClick={() => setCurrentScreen("kanban")}
               className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition flex items-center gap-2 shadow-xs cursor-pointer self-start sm:self-auto"
             >
-              <span>Vào Bảng Kanban</span>
+              <span>Xem Tiến độ công việc</span>
               <Rocket className="w-4 h-4" />
             </button>
           </div>
@@ -660,7 +660,7 @@ export const MilestonesView: React.FC = () => {
                 }`}
               >
                 <Rocket className="w-4 h-4" />
-                <span>Công bố &amp; Mở Kanban</span>
+                <span>Công bố &amp; Mở đợt công việc</span>
               </button>
             </div>
           </div>

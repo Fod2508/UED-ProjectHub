@@ -244,7 +244,7 @@ export const LandingView: React.FC = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-700">
-                      Kanban
+                      Tiến độ công việc
                     </span>
                     <span className="text-[10px] bg-slate-100 text-slate-500 font-medium px-2 py-0.5 rounded">
                       5m

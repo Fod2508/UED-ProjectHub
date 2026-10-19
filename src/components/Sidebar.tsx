@@ -61,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
       },
       {
         id: 'kanban',
-        label: 'Bảng tiến độ Kanban',
+        label: 'Tiến độ công việc',
         icon: <KanbanSquare className="w-[18px] h-[18px]" />
       },
       {
@@ -106,8 +106,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
       },
       {
         id: 'kanban',
-        label: 'Bảng tiến độ Kanban',
-        sublabel: 'Giao việc & Duyệt task',
+        label: 'Tiến độ công việc',
+        sublabel: 'Phân chia & Duyệt việc',
         icon: <KanbanSquare className="w-[18px] h-[18px]" />
       },
       {
@@ -152,8 +152,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
       },
       {
         id: 'kanban',
-        label: 'Bảng tiến độ Kanban',
-        sublabel: 'Tasks được phân công',
+        label: 'Tiến độ công việc',
+        sublabel: 'Công việc được giao',
         icon: <KanbanSquare className="w-[18px] h-[18px]" />
       },
       {

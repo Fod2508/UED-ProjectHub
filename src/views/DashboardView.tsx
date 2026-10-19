@@ -99,7 +99,7 @@ export const DashboardView: React.FC = () => {
                 className="px-6 py-3 rounded-xl bg-white text-blue-700 font-semibold hover:bg-blue-50 transition flex items-center gap-2 cursor-pointer shadow-sm"
               >
                 <KanbanSquare className="w-5 h-5" />
-                <span>Bảng Kanban</span>
+                <span>Tiến độ công việc</span>
               </button>
 
               <button
@@ -194,14 +194,14 @@ export const DashboardView: React.FC = () => {
               </div>
               <h3 className="text-base font-bold text-slate-900 mb-2">Tiến độ</h3>
               <p className="text-sm text-slate-600 mb-4">
-                Kanban board và quản lý cột mốc
+                Tiến độ công việc và quản lý cột mốc
               </p>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setCurrentScreen("kanban")}
                   className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
                 >
-                  Kanban
+                  Bảng tiến độ
                 </button>
                 <span className="text-slate-300">•</span>
                 <button
@@ -370,7 +370,7 @@ export const DashboardView: React.FC = () => {
                 className="px-6 py-3 rounded-xl bg-white text-blue-700 font-semibold hover:bg-blue-50 transition flex items-center gap-2 cursor-pointer"
               >
                 <KanbanSquare className="w-5 h-5" />
-                <span>Bảng Kanban</span>
+                <span>Tiến độ công việc</span>
               </button>
 
               <button
@@ -496,14 +496,14 @@ export const DashboardView: React.FC = () => {
             </div>
             <h3 className="text-base font-bold text-slate-900 mb-2">Tiến độ</h3>
             <p className="text-sm text-slate-600 mb-4">
-              Kanban board và quản lý cột mốc
+              Tiến độ công việc và quản lý cột mốc
             </p>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setCurrentScreen("kanban")}
                 className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
               >
-                Kanban
+                Bảng tiến độ
               </button>
               <span className="text-slate-300">•</span>
               <button

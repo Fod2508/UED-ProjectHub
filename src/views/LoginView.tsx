@@ -622,7 +622,7 @@ export const LoginView: React.FC = () => {
                   {/* Toggle tài khoản đã có nhóm */}
                   <div className="mt-2.5 pt-2 border-t border-blue-100 flex items-center justify-between text-[11px]">
                     <span className="text-slate-500">
-                      Cần test bảng Kanban hoặc Đánh giá chéo?
+                      Cần test Bảng tiến độ hoặc Đánh giá chéo?
                     </span>
                     <button
                       type="button"

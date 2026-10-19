@@ -259,7 +259,7 @@ export const PeerReviewView: React.FC = () => {
               <strong>Nguyên tắc Mã hóa Ẩn danh (Kịch bản 3.1):</strong> Hệ thống tự động băm mã danh tính người chấm để sinh viên hoàn toàn yên tâm đánh giá khách quan, trung thực.
             </p>
             <p className="text-indigo-700">
-              Điểm số từng thành viên sẽ được tổng hợp tự động thành Điểm đánh giá chéo TB và kết hợp với Tỷ lệ hoàn thành Task trên Kanban để nhận diện sinh viên Free-rider.
+              Điểm số từng thành viên sẽ được tổng hợp tự động thành Điểm đánh giá chéo TB và kết hợp với Tỷ lệ hoàn thành công việc trên Bảng tiến độ để đảm bảo đánh giá công bằng, minh bạch.
             </p>
           </div>
         </div>

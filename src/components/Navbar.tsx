@@ -43,8 +43,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
       ? "Quản lý Nhóm & Duyệt thành viên (SCR_01)"
       : "Tìm nhóm & Ghép đôi thông minh (SCR_01)",
     kanban: isLecturer
-      ? "Giám sát Tiến độ Kanban các Nhóm (SCR_03)"
-      : "Bảng tiến độ công việc Kanban (SCR_03)",
+      ? "Tiến độ công việc các Nhóm (SCR_03)"
+      : "Bảng tiến độ công việc (SCR_03)",
     milestones: isLecturer
       ? "Cấu hình Đề cương & Cột mốc nộp bài (SCR_04)"
       : "Lịch nộp bài học phần & Sprint nội bộ (SCR_04)",
