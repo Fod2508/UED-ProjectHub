@@ -660,6 +660,80 @@ export const DashboardView: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* 6. Danh sách các Nhóm đồ án trong lớp */}
+      <div className="bg-white p-6 rounded-2xl">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">
+              Danh sách các Nhóm đồ án trong lớp ({classGroups.length})
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Tất cả các nhóm đồ án đang hoạt động và tuyển thành viên trong lớp học phần
+            </p>
+          </div>
+          <button
+            onClick={() => setCurrentScreen("matchmaking")}
+            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg border border-blue-200 transition"
+          >
+            <span>Xem tất cả &amp; Ghép nhóm</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {classGroups.map((g) => {
+            const isFull = g.memberCount >= g.maxMembers;
+            const isMyGroup = currentUser?.teamId === g.id;
+            return (
+              <div
+                key={g.id}
+                onClick={() => setCurrentScreen("matchmaking")}
+                className={`p-4 rounded-xl border transition cursor-pointer ${
+                  isMyGroup
+                    ? "bg-blue-50/60 border-blue-300 ring-2 ring-blue-500/20"
+                    : "bg-slate-50 border-slate-200/80 hover:border-blue-300 hover:shadow-sm"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-md">
+                    {g.name.split(" - ")[0] || "Nhóm"}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {isMyGroup && (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                        Nhóm của bạn
+                      </span>
+                    )}
+                    <span
+                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        isFull
+                          ? "bg-slate-200 text-slate-600"
+                          : "bg-emerald-100 text-emerald-700"
+                      }`}
+                    >
+                      {g.memberCount}/{g.maxMembers} TV
+                    </span>
+                  </div>
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 truncate mb-1">
+                  {g.name}
+                </h4>
+                <p className="text-xs text-slate-600 line-clamp-1 mb-3">
+                  Đề tài: {g.topic}
+                </p>
+                <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200/60">
+                  <span>
+                    Trưởng nhóm:{" "}
+                    <strong className="text-slate-700">{g.leaderName}</strong>
+                  </span>
+                  <span className="text-blue-600 font-medium">Chi tiết →</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };

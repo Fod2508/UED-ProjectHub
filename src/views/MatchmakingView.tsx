@@ -49,6 +49,9 @@ export const MatchmakingView: React.FC = () => {
   const [lecturerFilter, setLecturerFilter] = useState<"all" | "full" | "recruiting">("all");
   const [lecturerSearch, setLecturerSearch] = useState("");
 
+  const [studentGroupFilter, setStudentGroupFilter] = useState<"all" | "recruiting" | "full">("all");
+  const [studentGroupSearch, setStudentGroupSearch] = useState("");
+
   const [groupMembers, setGroupMembers] = useState<
     Array<{
       id: string;
@@ -794,133 +797,286 @@ export const MatchmakingView: React.FC = () => {
         </div>
       </div>
 
-      {/* DANH SÁCH CÁC NHÓM ĐANG TUYỂN TRONG LỚP (Sinh viên có thể xem trực quan và tham gia) */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Users className="w-5 h-5 text-indigo-600" />
-              <span>Danh sách các nhóm đang tuyển thành viên trong lớp</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Sinh viên có thể xem đề tài, trưởng nhóm và bấm <strong>Tham gia ngay</strong> hoặc <strong>Gửi yêu cầu</strong>.
+      {/* DANH MỤC TẤT CẢ CÁC NHÓM ĐỒ ÁN TRONG LỚP (Sinh viên xem toàn bộ số lượng & trạng thái nhóm) */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs space-y-6">
+        {/* Header & Quick Stats */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">
+                <Users className="w-4 h-4" />
+              </span>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+                Danh mục tất cả các Nhóm đồ án trong lớp
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500">
+              Theo dõi toàn bộ các nhóm hiện có, kiểm tra nhóm vừa tạo, sĩ số và thành viên của từng nhóm.
             </p>
           </div>
-          <span className="text-xs font-semibold px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200 self-start sm:self-auto">
-            {classGroups.filter((g) => g.status === "Đang tuyển thành viên").length} nhóm đang tuyển
-          </span>
+
+          {/* 3 Quick Stat Badges */}
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+            <span className="text-xs font-semibold px-3 py-1.5 bg-slate-100 text-slate-700 rounded-xl border border-slate-200 flex items-center gap-1.5">
+              <span>Tổng:</span>
+              <strong className="text-indigo-600">{classGroups.length} nhóm</strong>
+            </span>
+            <span className="text-xs font-semibold px-3 py-1.5 bg-amber-50 text-amber-700 rounded-xl border border-amber-200 flex items-center gap-1.5">
+              <span>Đang tuyển:</span>
+              <strong>{classGroups.filter((g) => g.status === "Đang tuyển thành viên").length} nhóm</strong>
+            </span>
+            <span className="text-xs font-semibold px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-200 flex items-center gap-1.5">
+              <span>Đủ thành viên:</span>
+              <strong>{classGroups.filter((g) => g.status === "Đủ thành viên").length} nhóm</strong>
+            </span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {classGroups
-            .filter((g) => g.status === "Đang tuyển thành viên")
-            .map((group) => {
-              const isMyGroup = currentUser?.teamId === group.id;
-              return (
-                <div
-                  key={group.id}
-                  className={`p-5 rounded-2xl border transition flex flex-col justify-between gap-4 ${
-                    isMyGroup
-                      ? "bg-indigo-50/50 border-indigo-300 shadow-xs"
-                      : "bg-slate-50/70 border-slate-200/90 hover:bg-white hover:border-indigo-300 hover:shadow-xs"
-                  }`}
-                >
-                  <div className="space-y-3">
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="font-bold text-sm text-slate-900">
-                          {group.name}
-                        </h3>
-                        <p className="text-xs text-indigo-600 font-medium line-clamp-1 mt-0.5">
-                          {group.topic}
-                        </p>
-                      </div>
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
-                        {group.memberCount}/{group.maxMembers} SV
-                      </span>
-                    </div>
+        {/* Filter Tabs & Search Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Tabs */}
+          <div className="inline-flex p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setStudentGroupFilter("all")}
+              className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                studentGroupFilter === "all"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Tất cả ({classGroups.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStudentGroupFilter("recruiting")}
+              className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                studentGroupFilter === "recruiting"
+                  ? "bg-white text-amber-700 shadow-2xs font-bold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Đang tuyển ({classGroups.filter((g) => g.status === "Đang tuyển thành viên").length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStudentGroupFilter("full")}
+              className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                studentGroupFilter === "full"
+                  ? "bg-white text-emerald-700 shadow-2xs font-bold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Đã đủ ({classGroups.filter((g) => g.status === "Đủ thành viên").length})
+            </button>
+          </div>
 
-                    {/* Leader */}
-                    <div className="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-slate-100 text-xs">
-                      <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-[11px]">
-                        {group.leaderAvatar}
-                      </div>
-                      <div className="truncate">
-                        <span className="font-semibold text-slate-800 truncate block">
-                          {group.leaderName}
-                        </span>
-                        <span className="text-[10px] text-slate-400 truncate block">
-                          Trưởng nhóm
-                        </span>
-                      </div>
-                    </div>
+          {/* Search Input */}
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={studentGroupSearch}
+              onChange={(e) => setStudentGroupSearch(e.target.value)}
+              placeholder="Tìm tên nhóm, đề tài, trưởng nhóm..."
+              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none"
+            />
+          </div>
+        </div>
 
-                    {/* Missing skills */}
-                    {group.missingSkills && group.missingSkills.length > 0 && (
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                          Cần tuyển:
+        {/* Groups Grid */}
+        {classGroups.filter((group) => {
+          if (studentGroupFilter === "recruiting" && group.status !== "Đang tuyển thành viên") return false;
+          if (studentGroupFilter === "full" && group.status !== "Đủ thành viên") return false;
+          if (studentGroupSearch.trim()) {
+            const q = studentGroupSearch.toLowerCase();
+            const matchName = group.name.toLowerCase().includes(q);
+            const matchTopic = group.topic.toLowerCase().includes(q);
+            const matchLeader = group.leaderName.toLowerCase().includes(q);
+            const matchMember = group.members?.some((m) => m.name.toLowerCase().includes(q));
+            if (!matchName && !matchTopic && !matchLeader && !matchMember) return false;
+          }
+          return true;
+        }).length === 0 ? (
+          <div className="p-8 text-center text-slate-500 text-xs sm:text-sm bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            Không tìm thấy nhóm đồ án nào phù hợp với bộ lọc hiện tại.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {classGroups
+              .filter((group) => {
+                if (studentGroupFilter === "recruiting" && group.status !== "Đang tuyển thành viên") return false;
+                if (studentGroupFilter === "full" && group.status !== "Đủ thành viên") return false;
+                if (studentGroupSearch.trim()) {
+                  const q = studentGroupSearch.toLowerCase();
+                  const matchName = group.name.toLowerCase().includes(q);
+                  const matchTopic = group.topic.toLowerCase().includes(q);
+                  const matchLeader = group.leaderName.toLowerCase().includes(q);
+                  const matchMember = group.members?.some((m) => m.name.toLowerCase().includes(q));
+                  if (!matchName && !matchTopic && !matchLeader && !matchMember) return false;
+                }
+                return true;
+              })
+              .map((group) => {
+                const isMyGroup = currentUser?.teamId === group.id;
+                const isFull = group.status === "Đủ thành viên";
+
+                return (
+                  <div
+                    key={group.id}
+                    className={`p-5 rounded-2xl border transition flex flex-col justify-between gap-4 ${
+                      isMyGroup
+                        ? "bg-indigo-50/40 border-indigo-300 ring-2 ring-indigo-500/20 shadow-xs"
+                        : "bg-slate-50/70 border-slate-200 hover:bg-white hover:border-indigo-300 hover:shadow-xs"
+                    }`}
+                  >
+                    <div className="space-y-3.5">
+                      {/* Top Row: Name, Status & Member count */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h3 className="font-bold text-sm text-slate-900">
+                              {group.name}
+                            </h3>
+                            {isMyGroup && (
+                              <span className="px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold text-[10px]">
+                                Nhóm của bạn
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-indigo-700 font-medium line-clamp-1 mt-0.5 flex items-center gap-1">
+                            <BookOpen className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                            <span>{group.topic}</span>
+                          </p>
+                        </div>
+
+                        <span
+                          className={`text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                            isFull
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}
+                        >
+                          {group.memberCount}/{group.maxMembers} SV
                         </span>
-                        <div className="flex flex-wrap gap-1">
-                          {group.missingSkills.map((sk, idx) => (
-                            <span
-                              key={idx}
-                              className="text-[10px] px-2 py-0.5 bg-white border border-slate-200 rounded-md text-slate-600"
-                            >
-                              + {sk}
+                      </div>
+
+                      {/* Leader Card */}
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-[11px]">
+                            {group.leaderAvatar}
+                          </div>
+                          <div className="truncate">
+                            <div className="font-semibold text-slate-800 flex items-center gap-1">
+                              <span className="truncate">{group.leaderName}</span>
+                              <Crown className="w-3 h-3 text-amber-500 shrink-0" />
+                            </div>
+                            <span className="text-[10px] text-slate-400 truncate block">
+                              Trưởng nhóm • {group.leaderEmail || "sv@ued.udn.vn"}
                             </span>
-                          ))}
+                          </div>
                         </div>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Actions */}
-                  <div className="pt-2 border-t border-slate-200/60">
-                    {isMyGroup ? (
-                      <span className="w-full py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Nhóm hiện tại của bạn</span>
-                      </span>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          disabled={hasGroup}
-                          onClick={() => handleDirectJoin(group.id)}
-                          title={hasGroup ? "Bạn đã có nhóm khác" : "Vào nhóm ngay"}
-                          className={`py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                            hasGroup
-                              ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                              : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs"
-                          }`}
-                        >
-                          <UserPlus className="w-3.5 h-3.5" />
-                          <span>Tham gia ngay</span>
-                        </button>
+                      {/* Members List */}
+                      {group.members && group.members.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Thành viên nhóm ({group.members.length}):
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {group.members.map((m, mIdx) => (
+                              <span
+                                key={mIdx}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-[11px]"
+                              >
+                                <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 text-[9px] font-bold flex items-center justify-center">
+                                  {m.avatar || "SV"}
+                                </span>
+                                <span className="truncate max-w-[100px]">{m.name}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-                        <button
-                          type="button"
-                          disabled={hasGroup}
-                          onClick={() => handleSendJoin(group.id)}
-                          title={hasGroup ? "Bạn đã có nhóm khác" : "Gửi đơn xin gia nhập"}
-                          className={`py-2 px-2 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer ${
-                            hasGroup
-                              ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                              : "bg-blue-600 hover:bg-blue-700 text-white shadow-2xs"
-                          }`}
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                          <span>Gửi yêu cầu</span>
-                        </button>
-                      </div>
-                    )}
+                      {/* Missing skills needed (if recruiting) */}
+                      {!isFull && group.missingSkills && group.missingSkills.length > 0 && (
+                        <div className="space-y-1 bg-amber-50/70 p-2 rounded-xl border border-amber-100">
+                          <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
+                            Vị trí đang tuyển:
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {group.missingSkills.map((sk, idx) => (
+                              <span
+                                key={idx}
+                                className="text-[10px] px-2 py-0.5 bg-white border border-amber-200 rounded-md text-amber-700 font-semibold"
+                              >
+                                + {sk}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions Row */}
+                    <div className="pt-2 border-t border-slate-200/60">
+                      {isMyGroup ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setCurrentScreen("kanban")}
+                            className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                          >
+                            <span>Bảng công việc nhóm</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : isFull ? (
+                        <div className="w-full py-2 bg-slate-100 text-slate-500 rounded-xl text-xs font-medium text-center border border-slate-200">
+                          Nhóm đã đủ thành viên (4/4)
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            disabled={hasGroup}
+                            onClick={() => handleDirectJoin(group.id)}
+                            title={hasGroup ? "Bạn đã thuộc nhóm khác" : "Tham gia nhóm ngay"}
+                            className={`py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                              hasGroup
+                                ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                                : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs"
+                            }`}
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            <span>Tham gia ngay</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={hasGroup}
+                            onClick={() => handleSendJoin(group.id)}
+                            title={hasGroup ? "Bạn đã thuộc nhóm khác" : "Gửi đơn xin vào nhóm"}
+                            className={`py-2 px-2 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer ${
+                              hasGroup
+                                ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                                : "bg-blue-600 hover:bg-blue-700 text-white shadow-2xs"
+                            }`}
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Gửi yêu cầu</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-        </div>
+                );
+              })}
+          </div>
+        )}
       </div>
 
       {/* Group Members Card - Display if user is in a group */}
