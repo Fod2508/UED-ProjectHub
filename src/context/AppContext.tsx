@@ -407,9 +407,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           id: g.id,
           name: g.name,
           topic: g.projectTopic || "Đang đăng ký đề tài đồ án",
-          leaderName: g.createdBy ? "Trưởng nhóm" : "Chưa có",
-          leaderAvatar: "TN",
-          leaderEmail: "leader@ued.udn.vn",
+          leaderName: g.leaderName || (g.createdBy ? "Trưởng nhóm" : "Chưa có"),
+          leaderAvatar: g.leaderAvatar || "TN",
+          leaderEmail: g.leaderEmail || "leader@ued.udn.vn",
           memberCount: g.currentMemberCount || g.memberIds?.length || 1,
           maxMembers: g.maxMembers || 4,
           status:
@@ -417,11 +417,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
               ? "Đủ thành viên"
               : "Đang tuyển thành viên",
           missingSkills: g.skillsNeeded || ["Backend", "Frontend"],
-          members: (g.memberIds || []).map((mid) => ({
-            name: mid === g.createdBy ? "Trưởng nhóm" : "Thành viên",
-            role: mid === g.createdBy ? "Trưởng nhóm" : "Thành viên",
-            avatar: "SV",
-          })),
+          members:
+            g.members && g.members.length > 0
+              ? g.members
+              : (g.memberIds || []).map((mid) => ({
+                  name: mid === g.createdBy ? (g.leaderName || "Trưởng nhóm") : "Thành viên",
+                  role: mid === g.createdBy ? "Trưởng nhóm" : "Thành viên",
+                  avatar: "SV",
+                })),
           kanbanProgress: 0,
         }));
 
@@ -992,6 +995,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         courseId,
         userSkills,
         userSchedule,
+        {
+          avatar: currentUser.avatarText || "SV",
+          email: `${currentUser.code || currentUser.id}@ued.udn.vn`,
+          topic: "Đang đăng ký đề tài đồ án",
+        },
       );
 
       const groupCode = result.groupId ? `NHM-${result.groupId.split("_")[1] || Math.floor(Math.random() * 900 + 100)}` : `NHM-${Math.floor(Math.random() * 900 + 100)}`;
@@ -1083,7 +1091,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       const groupName = targetGroup?.name || `Nhóm ${groupId}`;
 
       // Thêm thành viên trong Firestore
-      await groupService.addMemberToGroup(groupId, currentUser.id);
+      await groupService.addMemberToGroup(groupId, currentUser.id, {
+        name: currentUser.name,
+        avatar: currentUser.avatarText || "SV",
+        role: "Thành viên",
+      });
 
       const updatedUser: UserProfile = {
         ...currentUser,
@@ -1162,7 +1174,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     const currentGroupName = currentUser.teamName || "Nhóm";
 
     try {
-      await groupService.removeMemberFromGroup(currentGroupId, currentUser.id);
+      await groupService.removeMemberFromGroup(currentGroupId, currentUser.id, currentUser.name);
 
       const updatedUser: UserProfile = {
         ...currentUser,

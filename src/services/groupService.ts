@@ -23,6 +23,10 @@ export interface Group {
   currentMemberCount: number;
   memberIds: string[];
   createdBy: string;
+  leaderName?: string;
+  leaderAvatar?: string;
+  leaderEmail?: string;
+  members?: Array<{ name: string; role: string; avatar: string }>;
   createdAt: string;
   status: "recruiting" | "full" | "active" | "completed";
   skillsNeeded: string[];
@@ -41,21 +45,36 @@ class GroupService {
     courseId: string,
     skillsOffered: string[],
     schedule?: Record<string, Record<string, boolean>>,
+    creatorDetails?: { avatar?: string; email?: string; topic?: string },
   ): Promise<{ success: boolean; groupId?: string; error?: string }> {
     try {
       // Generate unique group code
       const groupCode = `NHM-${Math.floor(Math.random() * 900 + 100)}`;
       const groupId = `nhom_${groupCode.toLowerCase().replace("-", "_")}`;
+      const groupName = `Nhóm ${groupCode.split("-")[1]} (${creatorName})`;
+      const leaderAvatar = creatorDetails?.avatar || creatorName.slice(0, 2).toUpperCase();
+      const leaderEmail = creatorDetails?.email || `${creatorId}@ued.udn.vn`;
 
       const newGroup: Group = {
         id: groupId,
-        name: `Nhóm ${groupCode.split("-")[1]}`,
+        name: groupName,
         code: groupCode,
         courseId,
+        projectTopic: creatorDetails?.topic || "Đang đăng ký đề tài đồ án",
         maxMembers: 4,
         currentMemberCount: 1,
         memberIds: [creatorId],
         createdBy: creatorId,
+        leaderName: creatorName,
+        leaderAvatar: leaderAvatar,
+        leaderEmail: leaderEmail,
+        members: [
+          {
+            name: creatorName,
+            role: "Trưởng nhóm",
+            avatar: leaderAvatar,
+          },
+        ],
         createdAt: new Date().toISOString(),
         status: "recruiting",
         skillsNeeded: this.getComplementarySkills(skillsOffered),
@@ -153,6 +172,7 @@ class GroupService {
   async addMemberToGroup(
     groupId: string,
     userId: string,
+    memberDetails?: { name?: string; avatar?: string; role?: string },
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const groupRef = doc(this.groupsCollection, groupId);
@@ -172,9 +192,21 @@ class GroupService {
         return { success: false, error: "Bạn đã là thành viên của nhóm này" };
       }
 
+      const memberName = memberDetails?.name || "Thành viên";
+      const memberAvatar = memberDetails?.avatar || memberName.slice(0, 2).toUpperCase();
+      const updatedMembers = [
+        ...(groupData.members || []),
+        {
+          name: memberName,
+          role: memberDetails?.role || "Thành viên",
+          avatar: memberAvatar,
+        },
+      ];
+
       await updateDoc(groupRef, {
         memberIds: [...groupData.memberIds, userId],
         currentMemberCount: groupData.currentMemberCount + 1,
+        members: updatedMembers,
         status:
           groupData.currentMemberCount + 1 >= groupData.maxMembers
             ? "full"
@@ -211,6 +243,7 @@ class GroupService {
   async removeMemberFromGroup(
     groupId: string,
     userId: string,
+    userName?: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const groupRef = doc(this.groupsCollection, groupId);
@@ -218,10 +251,14 @@ class GroupService {
 
       if (groupSnap.exists()) {
         const groupData = groupSnap.data() as Group;
-        const updatedMembers = groupData.memberIds.filter((id) => id !== userId);
+        const updatedMemberIds = groupData.memberIds.filter((id) => id !== userId);
+        const updatedMembers = (groupData.members || []).filter(
+          (m) => m.name !== userName,
+        );
         await updateDoc(groupRef, {
-          memberIds: updatedMembers,
-          currentMemberCount: Math.max(0, updatedMembers.length),
+          memberIds: updatedMemberIds,
+          currentMemberCount: Math.max(0, updatedMemberIds.length),
+          members: updatedMembers,
           status: "recruiting",
         });
       }
