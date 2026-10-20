@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useApp } from "../context/AppContext.tsx";
 import { validateMilestonesWeight } from "../utils/scoring.ts";
+import { Milestone } from "../types/index.ts";
 import {
   Calendar,
   CheckCircle,
@@ -12,12 +13,18 @@ import {
   Rocket,
   Edit2,
   FileCheck,
+  ExternalLink,
+  UploadCloud,
+  X,
+  CheckCircle2,
 } from "lucide-react";
 import { AddMilestoneModal } from "../components/AddMilestoneModal.tsx";
 
 export const MilestonesView: React.FC = () => {
   const {
     milestones,
+    milestoneSubmissions,
+    submitMilestoneProgress,
     updateMilestone,
     allowInternalMilestone,
     setAllowInternalMilestone,
@@ -37,6 +44,15 @@ export const MilestonesView: React.FC = () => {
     null,
   );
   const [editWeightValue, setEditWeightValue] = useState<number>(0);
+
+  // Submissions Modal State
+  const [selectedMilestoneForSubmit, setSelectedMilestoneForSubmit] =
+    useState<Milestone | null>(null);
+  const [selectedMilestoneForView, setSelectedMilestoneForView] =
+    useState<Milestone | null>(null);
+  const [subTitle, setSubTitle] = useState("");
+  const [subLink, setSubLink] = useState("");
+  const [subNote, setSubNote] = useState("");
 
   const handleStartEditWeight = (id: string, currentWeight: number) => {
     setEditingMilestoneId(id);
@@ -66,11 +82,33 @@ export const MilestonesView: React.FC = () => {
     }
   };
 
-  const handleViewSubmission = (milestoneName: string) => {
-    showToast(
-      `Bài nộp cho "${milestoneName}": ${classGroups.length}/${classGroups.length} nhóm sinh viên đã nộp đề cương & sản phẩm bàn giao.`,
-      "info",
-    );
+  const handleConfirmSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMilestoneForSubmit || !currentUser?.teamId) {
+      showToast("Bạn cần tham gia nhóm để nộp bài tiến độ.", "warning");
+      return;
+    }
+
+    await submitMilestoneProgress({
+      milestoneId: selectedMilestoneForSubmit.id,
+      milestoneName: selectedMilestoneForSubmit.name,
+      groupId: currentUser.teamId,
+      groupName: currentUser.teamName || "Nhóm đồ án",
+      submittedBy: currentUser.id,
+      submittedByName: currentUser.name,
+      title: subTitle.trim() || `Báo cáo tiến độ - ${selectedMilestoneForSubmit.name}`,
+      deliverablesLink: subLink.trim() || "https://github.com",
+      note: subNote.trim() || "Nhóm đã hoàn thành các sản phẩm yêu cầu của cột mốc.",
+    });
+
+    setSelectedMilestoneForSubmit(null);
+    setSubTitle("");
+    setSubLink("");
+    setSubNote("");
+  };
+
+  const handleViewSubmission = (m: Milestone) => {
+    setSelectedMilestoneForView(m);
   };
 
   const handlePublish = () => {
@@ -110,7 +148,7 @@ export const MilestonesView: React.FC = () => {
               onClick={() => setCurrentScreen("kanban")}
               className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition flex items-center gap-2 shadow-xs cursor-pointer self-start sm:self-auto"
             >
-              <span>Xem Tiến độ công việc</span>
+              <span>Xem Bảng công việc</span>
               <Rocket className="w-4 h-4" />
             </button>
           </div>
@@ -146,11 +184,16 @@ export const MilestonesView: React.FC = () => {
                     <th className="py-3.5 px-6">Hạn nộp</th>
                     <th className="py-3.5 px-6 text-center">Trọng số</th>
                     <th className="py-3.5 px-6">Trạng thái</th>
+                    <th className="py-3.5 px-6 text-right">Bài nộp &amp; Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-800">
                   {courseMilestones.map((m) => {
                     const isSprintActive = m.status === "Đang mở (Nước rút)";
+                    const mySubmission = milestoneSubmissions.find(
+                      (s) => s.milestoneId === m.id && s.groupId === currentUser?.teamId,
+                    );
+
                     return (
                       <tr
                         key={m.id}
@@ -216,6 +259,52 @@ export const MilestonesView: React.FC = () => {
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
                               <Lock className="w-3 h-3 text-amber-600" />
                               <span>Đã khóa</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Thao tác Nộp bài / Xem bài nộp */}
+                        <td className="py-4 px-6 align-top text-right whitespace-nowrap">
+                          {mySubmission ? (
+                            <div className="inline-flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleViewSubmission(m)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold hover:bg-emerald-100 transition cursor-pointer"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Đã nộp bài</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedMilestoneForSubmit(m);
+                                  setSubTitle(mySubmission.title);
+                                  setSubLink(mySubmission.deliverablesLink);
+                                  setSubNote(mySubmission.note);
+                                }}
+                                className="text-xs text-blue-600 hover:underline cursor-pointer"
+                              >
+                                Sửa
+                              </button>
+                            </div>
+                          ) : currentUser?.teamId ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedMilestoneForSubmit(m);
+                                setSubTitle(`Báo cáo tiến độ - ${m.name}`);
+                                setSubLink("");
+                                setSubNote("");
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+                            >
+                              <UploadCloud className="w-3.5 h-3.5" />
+                              <span>Nộp bài tiến độ</span>
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">
+                              Cần vào nhóm để nộp
                             </span>
                           )}
                         </td>
@@ -595,27 +684,27 @@ export const MilestonesView: React.FC = () => {
                               Sửa
                             </button>
 
-                            {m.status === "Đã hoàn thành" && (
-                              <>
-                                <span className="text-slate-300">|</span>
-                                <button
-                                  onClick={() => handleViewSubmission(m.name)}
-                                  className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
-                                >
-                                  <FileCheck className="w-3.5 h-3.5" />
-                                  <span>Xem bài nộp</span>
-                                </button>
-                              </>
-                            )}
+                            <span className="text-slate-300">|</span>
+                            <button
+                              type="button"
+                              onClick={() => handleViewSubmission(m)}
+                              className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <FileCheck className="w-3.5 h-3.5" />
+                              <span>
+                                Xem bài nộp ({milestoneSubmissions.filter((s) => s.milestoneId === m.id).length})
+                              </span>
+                            </button>
 
                             {m.status === "Đang mở (Nước rút)" && (
                               <>
                                 <span className="text-slate-300">|</span>
                                 <button
+                                  type="button"
                                   onClick={() =>
                                     handleToggleLockMilestone(m.id, m.status)
                                   }
-                                  className="text-xs font-semibold text-amber-600 hover:text-amber-700 hover:underline"
+                                  className="text-xs font-semibold text-amber-600 hover:text-amber-700 hover:underline cursor-pointer"
                                 >
                                   Khóa mốc
                                 </button>
@@ -747,6 +836,195 @@ export const MilestonesView: React.FC = () => {
 
           <AddMilestoneModal />
         </>
+      )}
+
+      {/* MODAL 1: NỘP BÀI TIẾN ĐỘ CỘT MỐC */}
+      {selectedMilestoneForSubmit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                  <UploadCloud className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">
+                    Nộp bài tiến độ Cột mốc
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {selectedMilestoneForSubmit.name} • {currentUser?.teamName || "Nhóm"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedMilestoneForSubmit(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Tiêu đề báo cáo / Tên chương nộp <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={subTitle}
+                  onChange={(e) => setSubTitle(e.target.value)}
+                  placeholder="Ví dụ: Báo cáo tiến độ Chương 2 & 3: Phân tích kiến trúc & Thiết kế DB"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Link sản phẩm / Tài liệu bàn giao (GitHub / Google Drive / Figma) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="url"
+                  required
+                  value={subLink}
+                  onChange={(e) => setSubLink(e.target.value)}
+                  placeholder="https://github.com/your-team/repo hoặc link Drive..."
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Tóm tắt nội dung &amp; kết quả hoàn thành
+                </label>
+                <textarea
+                  rows={3}
+                  value={subNote}
+                  onChange={(e) => setSubNote(e.target.value)}
+                  placeholder="Mô tả tóm tắt những hạng mục nhóm đã hoàn thiện trong cột mốc này..."
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedMilestoneForSubmit(null)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <UploadCloud className="w-4 h-4" />
+                  <span>Xác nhận nộp bài</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: XEM BÀI NỘP CỦA CÁC NHÓM */}
+      {selectedMilestoneForView && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <FileCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">
+                    Danh sách bài nộp: {selectedMilestoneForView.name}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Hạn nộp: {selectedMilestoneForView.dueDate} • Trọng số: {selectedMilestoneForView.weight}%
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedMilestoneForView(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4">
+              {milestoneSubmissions.filter((s) => s.milestoneId === selectedMilestoneForView.id).length === 0 ? (
+                <div className="p-8 text-center text-slate-500 text-xs sm:text-sm space-y-2">
+                  <p className="font-medium text-slate-700">Chưa có nhóm nào nộp bài cho cột mốc này.</p>
+                  <p className="text-xs text-slate-400">
+                    Sinh viên trong nhóm có thể bấm nút <strong>"Nộp bài tiến độ"</strong> ở bảng cột mốc để gửi báo cáo &amp; link sản phẩm.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {milestoneSubmissions
+                    .filter((s) => s.milestoneId === selectedMilestoneForView.id)
+                    .map((sub) => (
+                      <div
+                        key={sub.id}
+                        className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white transition space-y-2.5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="font-bold text-sm text-slate-900 block">
+                              {sub.title}
+                            </span>
+                            <span className="text-xs text-indigo-700 font-semibold">
+                              {sub.groupName}
+                            </span>
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold shrink-0">
+                            {sub.status}
+                          </span>
+                        </div>
+
+                        {sub.note && (
+                          <p className="text-xs text-slate-600 leading-relaxed bg-white p-2.5 rounded-lg border border-slate-100">
+                            {sub.note}
+                          </p>
+                        )}
+
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500 pt-1 border-t border-slate-100">
+                          <span>
+                            Người nộp: <strong>{sub.submittedByName}</strong> • {sub.submittedAt}
+                          </span>
+                          {sub.deliverablesLink && (
+                            <a
+                              href={sub.deliverablesLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>Mở link sản phẩm</span>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedMilestoneForView(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold text-xs rounded-xl cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

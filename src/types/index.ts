@@ -93,6 +93,21 @@ export interface KanbanTask {
   milestoneId?: string;
 }
 
+export interface MilestoneSubmission {
+  id: string;
+  milestoneId: string;
+  milestoneName: string;
+  groupId: string;
+  groupName: string;
+  submittedBy: string;
+  submittedByName: string;
+  submittedAt: string;
+  title: string;
+  deliverablesLink: string;
+  note: string;
+  status: "Đã nộp" | "Đạt yêu cầu" | "Cần bổ sung";
+}
+
 export interface Milestone {
   id: string;
   name: string;
@@ -105,6 +120,7 @@ export interface Milestone {
   teamId?: string;
   teamName?: string;
   createdBy?: string;
+  schedule?: Record<string, Record<string, boolean>>;
 }
 
 export interface PeerEvaluationInput {

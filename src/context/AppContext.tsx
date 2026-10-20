@@ -24,6 +24,7 @@ import {
   AppNotification,
   DemoPersona,
   ClassGroupSummary,
+  MilestoneSubmission,
 } from "../types/index.ts";
 import {
   INITIAL_STUDENT_USER,
@@ -88,8 +89,12 @@ interface AppContextType {
   isNewTaskModalOpen: boolean;
   setIsNewTaskModalOpen: (open: boolean) => void;
 
-  // Milestones (Giai đoạn 2)
+  // Milestones & Submissions (Giai đoạn 2)
   milestones: Milestone[];
+  milestoneSubmissions: MilestoneSubmission[];
+  submitMilestoneProgress: (
+    submission: Omit<MilestoneSubmission, "id" | "submittedAt" | "status">,
+  ) => Promise<boolean>;
   allowInternalMilestone: boolean;
   setAllowInternalMilestone: (val: boolean) => void;
   isAddMilestoneModalOpen: boolean;
@@ -146,11 +151,13 @@ interface AppContextType {
   findMatchingGroups: (
     userSkills: string[],
     userSchedule: FreeScheduleMatrix,
-  ) => Promise<Array<{ id: string; name: string; matchScore: number }>>;
+  ) => Promise<Array<{ id: string; name: string; matchScore: number; commonSlotsCount?: number }>>;
   createNewGroup: (
     userSkills: string[],
     userSchedule: FreeScheduleMatrix,
   ) => Promise<{ success: boolean; groupId?: string; groupCode?: string }>;
+  joinGroupDirectly: (groupId: string) => Promise<boolean>;
+  leaveCurrentGroup: () => Promise<boolean>;
 
   // Peer review trigger
   triggerPeerReview: (
@@ -453,6 +460,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [milestoneSubmissions, setMilestoneSubmissions] = useState<MilestoneSubmission[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY + "_milestone_submissions");
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return [
+      {
+        id: "sub_demo_01",
+        milestoneId: "m1",
+        milestoneName: "Cột mốc 1: Khởi động & Nộp đề cương",
+        groupId: "nhom_04",
+        groupName: "Nhóm 04 - Web App",
+        submittedBy: "user_student_1",
+        submittedByName: "Nguyễn Văn A",
+        submittedAt: "10/11/2026 14:30",
+        title: "Báo cáo đề cương chi tiết & Kiến trúc kỹ thuật",
+        deliverablesLink: "https://github.com/example/project-hub",
+        note: "Đã hoàn thành khảo sát kiến trúc React + Tailwind, hoàn thành DB schema.",
+        status: "Đạt yêu cầu",
+      },
+    ];
+  });
 
   const [allowInternalMilestone, setAllowInternalMilestone] = useState(true);
   const [isMilestoneLocked, setIsMilestoneLocked] = useState(false);
@@ -625,10 +656,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     switchDemoPersona(role === "lecturer" ? "lecturer" : "leader");
   };
 
-  const loginAsCustomUser = (user: UserProfile) => {
-    setCurrentUser(user);
-    setCurrentRole(user.role);
-    if (!user.teamId) {
+  const loginAsCustomUser = async (user: UserProfile) => {
+    let resolvedUser: UserProfile = { ...user };
+
+    // 1. Kiểm tra session profile trong localStorage
+    try {
+      const savedProfile = localStorage.getItem("ued_user_profile_" + user.id);
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile);
+        resolvedUser = { ...resolvedUser, ...parsed };
+      }
+    } catch (e) {
+      console.warn("Could not read local profile cache", e);
+    }
+
+    // 2. Kiểm tra nếu user là trưởng nhóm hoặc thành viên trong classGroups
+    const foundGroup = classGroups.find(
+      (g) =>
+        g.leaderName === user.name ||
+        g.members?.some((m) => m.name === user.name),
+    );
+    if (foundGroup) {
+      resolvedUser.teamId = foundGroup.id;
+      resolvedUser.teamName = foundGroup.name;
+      resolvedUser.isGroupLeader = foundGroup.leaderName === user.name;
+    }
+
+    // 3. Kiểm tra Firestore users collection
+    try {
+      const userDoc = await getDoc(doc(db, "users", user.id));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        if (data.teamId) resolvedUser.teamId = data.teamId;
+        if (data.teamName) resolvedUser.teamName = data.teamName;
+        if (typeof data.isGroupLeader === "boolean") {
+          resolvedUser.isGroupLeader = data.isGroupLeader;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not query Firestore user doc", e);
+    }
+
+    // Lưu lại profile hợp nhất
+    try {
+      localStorage.setItem("ued_user_profile_" + resolvedUser.id, JSON.stringify(resolvedUser));
+    } catch {
+      // ignore
+    }
+
+    setCurrentUser(resolvedUser);
+    setCurrentRole(resolvedUser.role);
+
+    if (!resolvedUser.teamId) {
       setTasks([]);
       setApplicants([]);
       setPeerReviews([]);
@@ -639,7 +718,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       setCurrentScreen("dashboard");
     }
     showToast(
-      `Đăng nhập thành công: ${user.name} (${user.className || user.code})!`,
+      `Đăng nhập thành công: ${resolvedUser.name} (${resolvedUser.className || resolvedUser.code})!`,
       "success",
     );
   };
@@ -809,7 +888,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const findMatchingGroups = async (
     userSkills: string[],
     userSchedule: FreeScheduleMatrix,
-  ): Promise<Array<{ id: string; name: string; matchScore: number }>> => {
+  ): Promise<Array<{ id: string; name: string; matchScore: number; commonSlotsCount?: number }>> => {
     if (!currentUser) {
       showToast("Bạn cần đăng nhập để tìm nhóm.", "warning");
       return [];
@@ -817,48 +896,72 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
     try {
       const courseId = "course_2024_2025"; // Default course
-      let matchingGroups = await groupService.findMatchingGroups(
+      const matchingGroups = await groupService.findMatchingGroups(
         userSkills,
         userSchedule,
         courseId,
       );
 
-      if (matchingGroups.length === 0) {
-        // Fallback to match against recruiting class groups so test users always find suitable groups (>=80%)
-        const recruiting = classGroups.filter(
-          (g) => g.status === "Đang tuyển thành viên",
-        );
-        if (recruiting.length > 0) {
-          return recruiting.map((g, idx) => ({
-            id: g.id,
-            name: `${g.name} - ${g.topic}`,
-            matchScore: idx === 0 ? 89 : 82,
-          }));
-        }
+      if (matchingGroups.length > 0) {
+        return matchingGroups.map((g) => ({
+          id: g.id,
+          name: g.name,
+          matchScore: g.matchScore,
+          commonSlotsCount: g.commonSlotsCount,
+        }));
+      }
+
+      // Đánh giá dựa trên classGroups tuyển thành viên theo công thức thực tế
+      const recruiting = classGroups.filter(
+        (g) => g.status === "Đang tuyển thành viên",
+      );
+
+      if (recruiting.length === 0) {
         showToast(
-          "Không tìm thấy nhóm phù hợp. Bạn có thể tạo nhóm mới.",
+          "Hiện tại không có nhóm nào đang tuyển thành viên. Bạn có thể tạo nhóm mới.",
           "info",
         );
         return [];
       }
 
-      // Return only essential info
-      return matchingGroups.map((g) => ({
-        id: g.id,
-        name: g.name,
-        matchScore: g.matchScore,
-      }));
+      const results = recruiting.map((g) => {
+        // 1. Tính độ phù hợp kỹ năng
+        const missing = g.missingSkills || ["Frontend", "Backend"];
+        const matchedSkills = userSkills.filter((s) =>
+          missing.some(
+            (m) =>
+              m.toLowerCase().includes(s.toLowerCase()) ||
+              s.toLowerCase().includes(m.toLowerCase()),
+          ),
+        );
+        const skillScore =
+          missing.length > 0
+            ? Math.min(100, Math.round((matchedSkills.length / missing.length) * 100))
+            : 70;
+
+        // 2. Tính số buổi rảnh trùng khớp
+        const groupSchedule = (g as any).schedule || {};
+        const { score: scheduleScore, matchedSlots } =
+          groupService.calculateScheduleMatch(userSchedule, groupSchedule);
+
+        let finalScore = Math.round(skillScore * 0.4 + scheduleScore * 0.6);
+        // Nếu không có bất kỳ buổi nào trùng nhau, điểm thấp (tối đa 25%)
+        if (matchedSlots === 0 && Object.keys(groupSchedule).length > 0) {
+          finalScore = Math.min(25, Math.round(skillScore * 0.25));
+        }
+
+        return {
+          id: g.id,
+          name: `${g.name} - ${g.topic}`,
+          matchScore: finalScore,
+          commonSlotsCount: matchedSlots,
+        };
+      });
+
+      return results.sort((a, b) => b.matchScore - a.matchScore);
     } catch (error) {
-      console.warn("Fallback matching groups:", error);
-      // Fallback matching groups
-      const recruiting = classGroups.filter(
-        (g) => g.status === "Đang tuyển thành viên",
-      );
-      return recruiting.map((g, idx) => ({
-        id: g.id,
-        name: `${g.name} - ${g.topic}`,
-        matchScore: idx === 0 ? 89 : 82,
-      }));
+      console.warn("Matching calculation error:", error);
+      return [];
     }
   };
 
@@ -872,8 +975,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       return { success: false };
     }
 
+    // Ràng buộc: Mỗi người chỉ được tạo nhóm 1 lần / chỉ thuộc 1 nhóm
+    if (currentUser.teamId) {
+      showToast(
+        `Bạn đã tham gia nhóm (${currentUser.teamName}). Mỗi sinh viên chỉ được tạo hoặc tham gia 1 nhóm đồ án!`,
+        "warning",
+      );
+      return { success: false };
+    }
+
     try {
-      const courseId = "course_2024_2025"; // Default course
+      const courseId = "course_2024_2025";
       const result = await groupService.createGroup(
         currentUser.id,
         currentUser.name,
@@ -882,140 +994,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         userSchedule,
       );
 
-      if (result.success && result.groupId) {
-        // Get the created group to extract the group code
-        const group = await groupService.getGroup(result.groupId);
-        const groupName = group?.name || `Nhóm ${group?.code || "mới"}`;
+      const groupCode = result.groupId ? `NHM-${result.groupId.split("_")[1] || Math.floor(Math.random() * 900 + 100)}` : `NHM-${Math.floor(Math.random() * 900 + 100)}`;
+      const groupId = result.groupId || `nhom_${Math.floor(Math.random() * 900 + 100)}`;
+      const groupName = `Nhóm ${groupCode.split("-")[1]} (${currentUser.name})`;
 
-        // Cập nhật state currentUser ngay lập tức
-        setCurrentUser((prev) =>
-          prev
-            ? {
-                ...prev,
-                teamId: result.groupId,
-                teamName: groupName,
-                isGroupLeader: true,
-              }
-            : null,
-        );
+      const updatedUser: UserProfile = {
+        ...currentUser,
+        teamId: groupId,
+        teamName: groupName,
+        isGroupLeader: true,
+      };
 
-        // Thêm ngay nhóm mới vào classGroups để Giảng viên và lớp cùng nhìn thấy
-        const newGroupSummary: ClassGroupSummary = {
-          id: result.groupId,
-          name: groupName,
-          topic: "Đang đăng ký đề tài đồ án",
-          leaderName: currentUser.name,
-          leaderAvatar: currentUser.avatarText || "SV",
-          leaderEmail: `${currentUser.code || "sv"}@ued.udn.vn`,
-          memberCount: 1,
-          maxMembers: 4,
-          status: "Đang tuyển thành viên",
-          missingSkills: userSkills.length > 0 ? ["Backend", "Kiểm thử"] : ["Frontend", "Backend"],
-          members: [
-            {
-              name: currentUser.name,
-              role: "Trưởng nhóm",
-              avatar: currentUser.avatarText || "SV",
-            },
-          ],
-          kanbanProgress: 0,
-        };
+      setCurrentUser(updatedUser);
 
-        setClassGroups((prev) => {
-          const updated = [newGroupSummary, ...prev.filter((g) => g.id !== result.groupId)];
-          try {
-            localStorage.setItem(STORAGE_KEY + "_class_groups", JSON.stringify(updated));
-          } catch (e) {
-            console.warn("Storage error", e);
-          }
-          return updated;
-        });
-
-        showToast(
-          `Đã tạo nhóm thành công! Mã nhóm: ${group?.code}. Bạn đã chính thức trở thành Trưởng nhóm!`,
-          "success",
-        );
-        return {
-          success: true,
-          groupId: result.groupId,
-          groupCode: group?.code,
-        };
-      } else {
-        // Fallback local group creation so testing always succeeds
-        const randomNum = Math.floor(Math.random() * 900 + 100);
-        const localGroupId = `nhom_${randomNum}`;
-        const localGroupName = `Nhóm ${randomNum} (${currentUser.name})`;
-        setCurrentUser((prev) =>
-          prev
-            ? {
-                ...prev,
-                teamId: localGroupId,
-                teamName: localGroupName,
-                isGroupLeader: true,
-              }
-            : null,
-        );
-
-        const newGroupSummary: ClassGroupSummary = {
-          id: localGroupId,
-          name: localGroupName,
-          topic: "Đang đăng ký đề tài đồ án",
-          leaderName: currentUser.name,
-          leaderAvatar: currentUser.avatarText || "SV",
-          leaderEmail: `${currentUser.code || "sv"}@ued.udn.vn`,
-          memberCount: 1,
-          maxMembers: 4,
-          status: "Đang tuyển thành viên",
-          missingSkills: ["Frontend", "Backend"],
-          members: [
-            {
-              name: currentUser.name,
-              role: "Trưởng nhóm",
-              avatar: currentUser.avatarText || "SV",
-            },
-          ],
-          kanbanProgress: 0,
-        };
-
-        setClassGroups((prev) => {
-          const updated = [newGroupSummary, ...prev.filter((g) => g.id !== localGroupId)];
-          try {
-            localStorage.setItem(STORAGE_KEY + "_class_groups", JSON.stringify(updated));
-          } catch (e) {
-            console.warn("Storage error", e);
-          }
-          return updated;
-        });
-
-        showToast(
-          `Đã tạo nhóm thành công! Mã nhóm: NHM-${randomNum}. Bạn đã chính thức trở thành Trưởng nhóm!`,
-          "success",
-        );
-        return {
-          success: true,
-          groupId: localGroupId,
-          groupCode: `NHM-${randomNum}`,
-        };
+      // Lưu cache profile
+      try {
+        localStorage.setItem("ued_user_profile_" + currentUser.id, JSON.stringify(updatedUser));
+      } catch (e) {
+        console.warn("Storage error", e);
       }
-    } catch (error) {
-      console.warn("Fallback group creation:", error);
-      const randomNum = Math.floor(Math.random() * 900 + 100);
-      const localGroupId = `nhom_${randomNum}`;
-      const localGroupName = `Nhóm ${randomNum} (${currentUser.name})`;
-      setCurrentUser((prev) =>
-        prev
-          ? {
-              ...prev,
-              teamId: localGroupId,
-              teamName: localGroupName,
-              isGroupLeader: true,
-            }
-          : null,
-      );
 
+      // Cập nhật classGroups
       const newGroupSummary: ClassGroupSummary = {
-        id: localGroupId,
-        name: localGroupName,
+        id: groupId,
+        name: groupName,
         topic: "Đang đăng ký đề tài đồ án",
         leaderName: currentUser.name,
         leaderAvatar: currentUser.avatarText || "SV",
@@ -1023,7 +1025,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         memberCount: 1,
         maxMembers: 4,
         status: "Đang tuyển thành viên",
-        missingSkills: ["Frontend", "Backend"],
+        missingSkills: userSkills.length > 0 ? ["Backend", "Kiểm thử"] : ["Frontend", "Backend"],
         members: [
           {
             name: currentUser.name,
@@ -1033,9 +1035,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         ],
         kanbanProgress: 0,
       };
+      (newGroupSummary as any).schedule = userSchedule;
 
       setClassGroups((prev) => {
-        const updated = [newGroupSummary, ...prev.filter((g) => g.id !== localGroupId)];
+        const updated = [newGroupSummary, ...prev.filter((g) => g.id !== groupId)];
         try {
           localStorage.setItem(STORAGE_KEY + "_class_groups", JSON.stringify(updated));
         } catch (e) {
@@ -1045,15 +1048,210 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
       showToast(
-        `Đã tạo nhóm thành công! Mã nhóm: NHM-${randomNum}. Bạn đã chính thức trở thành Trưởng nhóm!`,
+        `Đã tạo nhóm thành công! Mã nhóm: ${groupCode}. Bạn đã chính thức là Trưởng nhóm!`,
         "success",
       );
       return {
         success: true,
-        groupId: localGroupId,
-        groupCode: `NHM-${randomNum}`,
+        groupId,
+        groupCode,
       };
+    } catch (error) {
+      console.error("Error creating group:", error);
+      showToast("Lỗi khi tạo nhóm.", "error");
+      return { success: false };
     }
+  };
+
+  // Join group directly (tham gia nhóm ngay không cần chờ duyệt)
+  const joinGroupDirectly = async (groupId: string): Promise<boolean> => {
+    if (!currentUser) {
+      showToast("Bạn cần đăng nhập để tham gia nhóm.", "warning");
+      return false;
+    }
+
+    if (currentUser.teamId) {
+      showToast(
+        `Bạn đã tham gia nhóm (${currentUser.teamName}). Mỗi người chỉ được tham gia 1 nhóm đồ án!`,
+        "warning",
+      );
+      return false;
+    }
+
+    try {
+      const targetGroup = classGroups.find((g) => g.id === groupId);
+      const groupName = targetGroup?.name || `Nhóm ${groupId}`;
+
+      // Thêm thành viên trong Firestore
+      await groupService.addMemberToGroup(groupId, currentUser.id);
+
+      const updatedUser: UserProfile = {
+        ...currentUser,
+        teamId: groupId,
+        teamName: groupName,
+        isGroupLeader: false,
+      };
+
+      setCurrentUser(updatedUser);
+
+      try {
+        localStorage.setItem("ued_user_profile_" + currentUser.id, JSON.stringify(updatedUser));
+      } catch (e) {
+        console.warn("Storage error", e);
+      }
+
+      // Cập nhật classGroups
+      setClassGroups((prev) => {
+        const updated = prev.map((g) => {
+          if (g.id === groupId) {
+            const newMemberCount = g.memberCount + 1;
+            const newMembers = [
+              ...g.members,
+              {
+                name: currentUser.name,
+                role: "Thành viên",
+                avatar: currentUser.avatarText || "SV",
+              },
+            ];
+            return {
+              ...g,
+              memberCount: newMemberCount,
+              status: (newMemberCount >= g.maxMembers ? "Đủ thành viên" : "Đang tuyển thành viên") as any,
+              members: newMembers,
+            };
+          }
+          return g;
+        });
+        try {
+          localStorage.setItem(STORAGE_KEY + "_class_groups", JSON.stringify(updated));
+        } catch (e) {
+          console.warn("Storage error", e);
+        }
+        return updated;
+      });
+
+      if (tasks.length === 0) setTasks(INITIAL_TASKS);
+      if (milestones.length === 0) setMilestones(INITIAL_MILESTONES);
+
+      showToast(`Đã tham gia ${groupName} thành công!`, "success");
+      addNotification({
+        title: "Gia nhập nhóm thành công",
+        message: `Bạn đã trở thành thành viên chính thức của ${groupName}.`,
+        type: "team_approved",
+        targetScreen: "kanban",
+        recipientRole: "student",
+      });
+
+      setCurrentScreen("dashboard");
+      return true;
+    } catch (error) {
+      console.error("Error joining group directly:", error);
+      showToast("Lỗi khi tham gia nhóm.", "error");
+      return false;
+    }
+  };
+
+  // Leave current group (rời khỏi nhóm để tìm/tạo nhóm khác)
+  const leaveCurrentGroup = async (): Promise<boolean> => {
+    if (!currentUser || !currentUser.teamId) {
+      showToast("Bạn chưa tham gia nhóm nào.", "warning");
+      return false;
+    }
+
+    const currentGroupId = currentUser.teamId;
+    const currentGroupName = currentUser.teamName || "Nhóm";
+
+    try {
+      await groupService.removeMemberFromGroup(currentGroupId, currentUser.id);
+
+      const updatedUser: UserProfile = {
+        ...currentUser,
+        teamId: undefined,
+        teamName: undefined,
+        isGroupLeader: false,
+      };
+
+      setCurrentUser(updatedUser);
+
+      try {
+        localStorage.setItem("ued_user_profile_" + currentUser.id, JSON.stringify(updatedUser));
+      } catch (e) {
+        console.warn("Storage error", e);
+      }
+
+      setClassGroups((prev) => {
+        const updated = prev.map((g) => {
+          if (g.id === currentGroupId) {
+            const newMembers = g.members.filter((m) => m.name !== currentUser.name);
+            return {
+              ...g,
+              memberCount: Math.max(0, newMembers.length),
+              status: "Đang tuyển thành viên" as any,
+              members: newMembers,
+            };
+          }
+          return g;
+        });
+        try {
+          localStorage.setItem(STORAGE_KEY + "_class_groups", JSON.stringify(updated));
+        } catch (e) {
+          console.warn("Storage error", e);
+        }
+        return updated;
+      });
+
+      setTasks([]);
+      showToast(`Đã rời khỏi ${currentGroupName}. Bây giờ bạn có thể tìm hoặc tạo nhóm mới.`, "info");
+      return true;
+    } catch (error) {
+      console.error("Error leaving group:", error);
+      showToast("Lỗi khi rời nhóm.", "error");
+      return false;
+    }
+  };
+
+  // Submit milestone progress
+  const submitMilestoneProgress = async (
+    submission: Omit<MilestoneSubmission, "id" | "submittedAt" | "status">,
+  ): Promise<boolean> => {
+    if (!currentUser?.teamId) {
+      showToast("Bạn cần tham gia nhóm để nộp bài tiến độ.", "warning");
+      return false;
+    }
+
+    const now = new Date();
+    const formattedDate = `${now.getDate().toString().padStart(2, "0")}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getFullYear()} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+
+    const newSub: MilestoneSubmission = {
+      ...submission,
+      id: `sub_${Date.now()}`,
+      submittedAt: formattedDate,
+      status: "Đã nộp",
+    };
+
+    setMilestoneSubmissions((prev) => {
+      const filtered = prev.filter(
+        (s) => !(s.milestoneId === submission.milestoneId && s.groupId === submission.groupId),
+      );
+      const updated = [newSub, ...filtered];
+      try {
+        localStorage.setItem(STORAGE_KEY + "_milestone_submissions", JSON.stringify(updated));
+      } catch (e) {
+        console.warn("Could not save submissions", e);
+      }
+      return updated;
+    });
+
+    showToast(`Đã nộp bài tiến độ "${submission.title}" thành công!`, "success");
+    addNotification({
+      title: `Nhóm ${submission.groupName} đã nộp bài`,
+      message: `${currentUser.name} vừa nộp bài tiến độ cho cột mốc ${submission.milestoneName}: ${submission.title}`,
+      type: "milestone_published",
+      targetScreen: "milestones",
+      recipientRole: "all",
+    });
+
+    return true;
   };
 
   // Move tasks on Kanban
@@ -1480,6 +1678,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         sendJoinRequest,
         findMatchingGroups,
         createNewGroup,
+        joinGroupDirectly,
+        leaveCurrentGroup,
         triggerPeerReview,
         isApplicantModalOpen,
         setIsApplicantModalOpen,
@@ -1492,6 +1692,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         isNewTaskModalOpen,
         setIsNewTaskModalOpen,
         milestones,
+        milestoneSubmissions,
+        submitMilestoneProgress,
         allowInternalMilestone,
         setAllowInternalMilestone,
         isAddMilestoneModalOpen,

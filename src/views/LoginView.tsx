@@ -70,7 +70,7 @@ export const LoginView: React.FC = () => {
     );
     if (matchedUnassigned) {
       if (password === "123456" || password === matchedUnassigned.password) {
-        loginAsCustomUser(matchedUnassigned);
+        await loginAsCustomUser(matchedUnassigned);
         setIsLoading(false);
         return;
       } else {
