@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext.tsx";
 import { TaskStatus, KanbanTask } from "../types/index.ts";
-import { checkIsTaskOverdue } from "../utils/scoring.ts";
+import { checkIsTaskOverdue, markOverdueTasks } from "../utils/scoring.ts";
+import { taskService } from "../services/taskService.ts";
+import { auth } from "../config/firebase.ts";
 import {
   Plus,
   Search,
@@ -23,10 +25,29 @@ import {
   ArrowRight,
   ExternalLink,
   ShieldCheck,
-  MessageSquare,
   Sparkles,
 } from "lucide-react";
 import { NewTaskModal } from "../components/NewTaskModal.tsx";
+
+// Nhóm mẫu đi kèm dữ liệu công việc mẫu ở chế độ demo
+const DEMO_GROUP_ID = "nhom_04";
+
+// Màu avatar ổn định theo tên người phụ trách
+const AVATAR_COLORS = [
+  "bg-blue-600",
+  "bg-emerald-600",
+  "bg-indigo-600",
+  "bg-rose-600",
+  "bg-amber-600",
+  "bg-teal-600",
+];
+const avatarColor = (name: string) => {
+  let hash = 0;
+  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) % 997;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+};
+
+const UNASSIGNED = "Chưa giao";
 
 export const KanbanView: React.FC = () => {
   const {
@@ -46,7 +67,42 @@ export const KanbanView: React.FC = () => {
   const [selectedLecturerGroup, setSelectedLecturerGroup] = useState<string | null>(null);
   const [lecturerStatusFilter, setLecturerStatusFilter] = useState<"all" | "good" | "slow">("all");
   const [lecturerSearch, setLecturerSearch] = useState("");
-  const [lecturerFeedback, setLecturerFeedback] = useState("");
+
+  // Công việc của nhóm mà Giảng viên đang xem chi tiết
+  const [lecturerGroupTasks, setLecturerGroupTasks] = useState<KanbanTask[]>([]);
+  const [lecturerTasksLoading, setLecturerTasksLoading] = useState(false);
+
+  useEffect(() => {
+    if (!selectedLecturerGroup) {
+      setLecturerGroupTasks([]);
+      return;
+    }
+    // Chế độ demo (không đăng nhập Firebase): chỉ nhóm mẫu mới có dữ liệu công việc mẫu
+    if (!auth.currentUser) {
+      setLecturerGroupTasks(selectedLecturerGroup === DEMO_GROUP_ID ? tasks : []);
+      return;
+    }
+    let cancelled = false;
+    setLecturerTasksLoading(true);
+    taskService
+      .getGroupTasks(selectedLecturerGroup)
+      .then((list) => {
+        if (!cancelled) setLecturerGroupTasks(markOverdueTasks(list) as KanbanTask[]);
+      })
+      .catch((error) => {
+        console.error("Error loading group tasks:", error);
+        if (!cancelled) {
+          setLecturerGroupTasks([]);
+          showToast("Không tải được công việc của nhóm này.", "error");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLecturerTasksLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedLecturerGroup]);
 
   // Student view state
   const [activeFilter, setActiveFilter] = useState<"all" | "mine" | "overdue">("all");
@@ -130,7 +186,7 @@ export const KanbanView: React.FC = () => {
       return false;
     }
 
-    if (selectedAssignee && task.assigneeAvatar !== selectedAssignee)
+    if (selectedAssignee && task.assigneeName !== selectedAssignee)
       return false;
 
     if (searchQuery.trim()) {
@@ -143,6 +199,12 @@ export const KanbanView: React.FC = () => {
 
     return true;
   });
+
+  // Người phụ trách thật đang có việc trên bảng (dùng cho bộ lọc)
+  const assigneeOptions = tasks
+    .filter((t) => t.assigneeName && t.assigneeName !== UNASSIGNED)
+    .map((t) => ({ name: t.assigneeName, avatar: t.assigneeAvatar }))
+    .filter((m, i, all) => all.findIndex((x) => x.name === m.name) === i);
 
   const completedCount = tasks.filter((t) => t.status === "Hoàn thành").length;
   const totalCount = tasks.length;
@@ -359,12 +421,6 @@ export const KanbanView: React.FC = () => {
     window.print();
   };
 
-  const handleSendLecturer = () => {
-    showToast(
-      "Đã gửi báo cáo tiến độ công việc đến Giảng viên hướng dẫn thành công!",
-      "success",
-    );
-  };
 
   // =========================================================================
   // GIAO DIỆN GIẢNG VIÊN: BẢNG GIÁM SÁT TIẾN ĐỘ CÔNG VIỆC CÁC NHÓM
@@ -550,42 +606,23 @@ export const KanbanView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Nhận xét chỉ đạo của Giảng viên */}
-              <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-indigo-900">
-                  <MessageSquare className="w-4 h-4 text-indigo-600" />
-                  <span>Gửi nhận xét chỉ đạo đến {activeGroupDetail.name}</span>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={lecturerFeedback}
-                    onChange={(e) => setLecturerFeedback(e.target.value)}
-                    placeholder="Nhập nhận xét hoặc nhắc nhở tiến độ gửi tới nhóm..."
-                    className="flex-1 bg-white border border-indigo-200 rounded-lg px-3 py-2 text-xs text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                  <button
-                    onClick={() => {
-                      if (!lecturerFeedback.trim()) return;
-                      showToast(`Đã gửi nhận xét đến ${activeGroupDetail.name} thành công!`, "success");
-                      setLecturerFeedback("");
-                    }}
-                    className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition cursor-pointer"
-                  >
-                    Gửi nhận xét
-                  </button>
-                </div>
-              </div>
             </div>
 
             {/* Bảng danh sách công việc của nhóm */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
               <h3 className="text-base font-bold text-slate-900">
-                Danh sách công việc đang thực hiện của nhóm
+                Danh sách công việc của nhóm
               </h3>
 
               <div className="space-y-3">
-                {tasks.map((task) => (
+                {lecturerGroupTasks.length === 0 && (
+                  <p className="py-8 text-center text-sm text-slate-400">
+                    {lecturerTasksLoading
+                      ? "Đang tải công việc..."
+                      : "Nhóm này chưa có công việc nào."}
+                  </p>
+                )}
+                {lecturerGroupTasks.map((task) => (
                   <div
                     key={task.id}
                     className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
@@ -787,19 +824,6 @@ export const KanbanView: React.FC = () => {
                       >
                         <span>Xem chi tiết việc</span>
                         <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          showToast(
-                            `Đã gửi lời nhắc tiến độ tới ${g.name} (${g.leaderName})!`,
-                            "success",
-                          );
-                        }}
-                        title="Gửi nhắc nhở tiến độ đến nhóm"
-                        className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 text-xs transition cursor-pointer"
-                      >
-                        <Send className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -1007,35 +1031,22 @@ export const KanbanView: React.FC = () => {
             >
               Tất cả
             </button>
-            {[
-              { id: "NA", name: "Nguyễn Văn A" },
-              { id: "TH", name: "Trần Thu Hà" },
-              { id: "DM", name: "Đặng Minh" },
-              { id: "LC", name: "Lê Văn Cúc" },
-            ].map((mem) => {
-              const isSelected = selectedAssignee === mem.id;
+            {assigneeOptions.map((mem) => {
+              const isSelected = selectedAssignee === mem.name;
               return (
                 <button
-                  key={mem.id}
+                  key={mem.name}
                   onClick={() =>
-                    setSelectedAssignee(isSelected ? null : mem.id)
+                    setSelectedAssignee(isSelected ? null : mem.name)
                   }
                   title={mem.name}
-                  className={`w-7 h-7 rounded-full text-xs font-bold text-white transition flex items-center justify-center cursor-pointer ${
-                    mem.id === "LC"
-                      ? "bg-rose-600"
-                      : mem.id === "TH"
-                      ? "bg-emerald-600"
-                      : mem.id === "DM"
-                      ? "bg-indigo-600"
-                      : "bg-blue-600"
-                  } ${
+                  className={`w-7 h-7 rounded-full text-xs font-bold text-white transition flex items-center justify-center cursor-pointer ${avatarColor(mem.name)} ${
                     isSelected
                       ? "ring-2 ring-blue-600 ring-offset-2 scale-110"
                       : "opacity-80 hover:opacity-100"
                   }`}
                 >
-                  {mem.id}
+                  {mem.avatar}
                 </button>
               );
             })}
@@ -1110,9 +1121,15 @@ export const KanbanView: React.FC = () => {
                                 ?.name.split(":")[0] || task.milestoneId}
                             </span>
                           )}
-                          {task.priority === "Ưu tiên Cao" && (
-                            <span className="text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-1 rounded">
-                              !
+                          {task.priority && task.priority !== "Thường" && (
+                            <span
+                              className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${
+                                task.priority === "Khẩn cấp"
+                                  ? "text-white bg-rose-600"
+                                  : "text-rose-700 bg-rose-50 border border-rose-200"
+                              }`}
+                            >
+                              {task.priority}
                             </span>
                           )}
                         </div>
@@ -1129,6 +1146,12 @@ export const KanbanView: React.FC = () => {
                         <h4 className="text-sm font-bold text-slate-900 leading-snug">
                           {task.title}
                         </h4>
+
+                        {/* Người phụ trách */}
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                          <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{task.assigneeName}</span>
+                        </div>
 
                         {/* Lý do bị Trưởng nhóm trả lại */}
                         {task.status === "Đang thực hiện" && task.returnReason && (
@@ -1246,15 +1269,7 @@ export const KanbanView: React.FC = () => {
                             {/* Avatar */}
                             <div
                               title={task.assigneeName}
-                              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs text-white font-bold ${
-                                task.assigneeAvatar === "LC"
-                                  ? "bg-rose-600"
-                                  : task.assigneeAvatar === "TH"
-                                  ? "bg-emerald-600"
-                                  : task.assigneeAvatar === "DM"
-                                  ? "bg-indigo-600"
-                                  : "bg-blue-600"
-                              }`}
+                              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs text-white font-bold ${avatarColor(task.assigneeName)}`}
                             >
                               {task.assigneeAvatar}
                             </div>
@@ -1308,14 +1323,6 @@ export const KanbanView: React.FC = () => {
           >
             <Download className="w-4 h-4" />
             <span>Xuất PDF</span>
-          </button>
-
-          <button
-            onClick={handleSendLecturer}
-            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition flex items-center gap-2 cursor-pointer"
-          >
-            <Send className="w-4 h-4" />
-            <span>Gửi GV</span>
           </button>
         </div>
       </div>

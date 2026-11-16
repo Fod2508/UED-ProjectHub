@@ -167,6 +167,15 @@ export const MilestonesView: React.FC = () => {
     }
   };
 
+  // Bài nộp hiện trong cửa sổ xem: Giảng viên thấy mọi nhóm, sinh viên chỉ thấy nhóm mình
+  const viewableSubmissions = selectedMilestoneForView
+    ? milestoneSubmissions.filter(
+        (sub) =>
+          sub.milestoneId === selectedMilestoneForView.id &&
+          (currentRole === "lecturer" || sub.groupId === currentUser?.teamId),
+      )
+    : [];
+
   const courseMilestones = milestones.filter((m) => m.type !== "internal");
   const internalMilestones = milestones.filter(
     (m) =>
@@ -794,13 +803,6 @@ export const MilestonesView: React.FC = () => {
             {/* Save Draft & Publish */}
             <div className="flex items-center gap-3 justify-end">
               <button
-                onClick={() => showToast("Đã lưu bản nháp cột mốc.", "info")}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-xs sm:text-sm shadow-xs transition"
-              >
-                Lưu bản nháp
-              </button>
-
-              <button
                 onClick={handlePublish}
                 disabled={!isValid}
                 className={`inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-white font-semibold text-xs sm:text-sm shadow-sm transition active:scale-[0.98] cursor-pointer ${
@@ -1012,7 +1014,7 @@ export const MilestonesView: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-base">
-                    Danh sách bài nộp: {selectedMilestoneForView.name}
+                    {currentRole === "lecturer" ? "Danh sách bài nộp" : "Bài nộp của nhóm"}: {selectedMilestoneForView.name}
                   </h3>
                   <p className="text-xs text-slate-500">
                     Hạn nộp: {selectedMilestoneForView.dueDate} • Trọng số: {selectedMilestoneForView.weight}%
@@ -1029,18 +1031,16 @@ export const MilestonesView: React.FC = () => {
             </div>
 
             <div className="p-6 overflow-y-auto space-y-4">
-              {milestoneSubmissions.filter((s) => s.milestoneId === selectedMilestoneForView.id).length === 0 ? (
+              {viewableSubmissions.length === 0 ? (
                 <div className="p-8 text-center text-slate-500 text-xs sm:text-sm space-y-2">
-                  <p className="font-medium text-slate-700">Chưa có nhóm nào nộp bài cho cột mốc này.</p>
+                  <p className="font-medium text-slate-700">Chưa có bài nộp nào cho cột mốc này.</p>
                   <p className="text-xs text-slate-400">
                     Trưởng nhóm có thể bấm nút <strong>"Nộp bài tiến độ"</strong> ở bảng cột mốc để gửi báo cáo &amp; link sản phẩm.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {milestoneSubmissions
-                    .filter((s) => s.milestoneId === selectedMilestoneForView.id)
-                    .map((sub) => (
+                  {viewableSubmissions.map((sub) => (
                       <div
                         key={sub.id}
                         className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white transition space-y-2.5"
