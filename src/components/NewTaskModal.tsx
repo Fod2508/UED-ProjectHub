@@ -67,7 +67,7 @@ export const NewTaskModal: React.FC = () => {
     if (!title.trim()) return;
 
     if (!currentUser?.teamId) {
-      showToast("Bạn chưa tham gia nhóm nào để tạo task.", "warning");
+      showToast("Bạn chưa tham gia nhóm nào để tạo công việc.", "warning");
       return;
     }
 
@@ -117,12 +117,12 @@ export const NewTaskModal: React.FC = () => {
               <Plus className="w-4 h-4" />
             </div>
             <h3 className="font-bold text-slate-900 text-base">
-              Tạo tác vụ mới
+              Tạo công việc mới
             </h3>
           </div>
           <button
             onClick={() => setIsNewTaskModalOpen(false)}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition"
+            className="p-1 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200 transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -132,14 +132,14 @@ export const NewTaskModal: React.FC = () => {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">
-              Tên tác vụ <span className="text-rose-500">*</span>
+              Tên công việc <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ví dụ: Thiết kế giao diện Dashboard"
+              placeholder="Ví dụ: Thiết kế giao diện trang tổng quan"
               className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
             />
           </div>
@@ -159,7 +159,7 @@ export const NewTaskModal: React.FC = () => {
 
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">
-              Thuộc Cột mốc nộp bài (Milestone / Sprint) <span className="text-rose-500">*</span>
+              Thuộc Cột mốc nộp bài <span className="text-rose-500">*</span>
             </label>
             <select
               value={milestoneId}
@@ -264,7 +264,7 @@ export const NewTaskModal: React.FC = () => {
               type="submit"
               className="px-5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition shadow-sm"
             >
-              Tạo tác vụ
+              Tạo công việc
             </button>
           </div>
         </form>

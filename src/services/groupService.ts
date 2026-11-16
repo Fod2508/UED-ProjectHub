@@ -11,7 +11,7 @@ import {
   DocumentData,
   onSnapshot,
 } from "firebase/firestore";
-import { db } from "../config/firebase.ts";
+import { auth, db } from "../config/firebase.ts";
 import { calculateMatchScore } from "../utils/scoring.ts";
 
 export interface Group {
@@ -304,6 +304,8 @@ class GroupService {
    * Get group by ID
    */
   async getGroup(groupId: string): Promise<Group | null> {
+    // Vai mẫu không đăng nhập Firebase: không có quyền đọc, khỏi gọi
+    if (!auth.currentUser) return null;
     try {
       const groupRef = doc(this.groupsCollection, groupId);
       const groupSnap = await getDoc(groupRef);

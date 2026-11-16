@@ -3,7 +3,6 @@ import { useApp } from '../context/AppContext.tsx';
 import { ScreenType } from '../types/index.ts';
 import {
   Home,
-  LayoutDashboard,
   Users,
   KanbanSquare,
   CalendarCheck,
@@ -34,7 +33,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
   let navItems: {
     id: ScreenType;
     label: string;
-    sublabel?: string;
     icon: React.ReactNode;
     badge?: number | string;
     badgeColor?: string;
@@ -43,18 +41,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
   if (isLecturer) {
     navItems = [
       {
-        id: 'landing',
+        id: 'dashboard',
         label: 'Trang chủ',
         icon: <Home className="w-[18px] h-[18px]" />
       },
       {
-        id: 'dashboard',
-        label: 'Tổng quan Môn học',
-        icon: <LayoutDashboard className="w-[18px] h-[18px]" />
-      },
-      {
         id: 'matchmaking',
-        label: 'Quản lý Nhóm & Đề tài',
+        label: 'Quản lý nhóm',
         icon: <Users className="w-[18px] h-[18px]" />,
         badge: classGroups.length,
         badgeColor: 'bg-indigo-600 text-white'
@@ -66,17 +59,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
       },
       {
         id: 'milestones',
-        label: 'Cột mốc & Đề cương',
+        label: 'Cột mốc',
         icon: <CalendarCheck className="w-[18px] h-[18px]" />
       },
       {
         id: 'peer_review',
-        label: 'Đánh giá chéo thành viên',
+        label: 'Đánh giá chéo',
         icon: <ClipboardCheck className="w-[18px] h-[18px]" />
       },
       {
         id: 'report',
-        label: 'Báo cáo & Thẩm định',
+        label: 'Báo cáo đóng góp',
         icon: <BarChart3 className="w-[18px] h-[18px]" />,
         badge: warningCount > 0 ? warningCount : undefined,
         badgeColor: 'bg-rose-500 text-white'
@@ -86,20 +79,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
     // Sinh viên - Trưởng nhóm
     navItems = [
       {
-        id: 'landing',
+        id: 'dashboard',
         label: 'Trang chủ',
         icon: <Home className="w-[18px] h-[18px]" />
       },
       {
-        id: 'dashboard',
-        label: 'Tổng quan Nhóm đồ án',
-        sublabel: currentUser?.teamName || 'Nhóm của tôi',
-        icon: <LayoutDashboard className="w-[18px] h-[18px]" />
-      },
-      {
         id: 'matchmaking',
-        label: 'Quản lý Nhóm & Duyệt TV',
-        sublabel: 'Xét duyệt hồ sơ SV',
+        label: 'Quản lý nhóm',
         icon: <Users className="w-[18px] h-[18px]" />,
         badge: pendingApplicantsCount > 0 ? pendingApplicantsCount : undefined,
         badgeColor: 'bg-emerald-600 text-white animate-pulse'
@@ -107,25 +93,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
       {
         id: 'kanban',
         label: 'Tiến độ công việc',
-        sublabel: 'Phân chia & Duyệt việc',
         icon: <KanbanSquare className="w-[18px] h-[18px]" />
       },
       {
         id: 'milestones',
-        label: 'Cột mốc & Sprint nội bộ',
-        sublabel: 'Lập kế hoạch nhóm',
+        label: 'Cột mốc',
         icon: <CalendarCheck className="w-[18px] h-[18px]" />
       },
       {
         id: 'peer_review',
-        label: 'Đánh giá chéo thành viên',
-        sublabel: 'Bỏ phiếu ẩn danh',
+        label: 'Đánh giá chéo',
         icon: <ClipboardCheck className="w-[18px] h-[18px]" />
       },
       {
         id: 'report',
-        label: 'Báo cáo Đóng góp của tôi',
-        sublabel: 'Xem điểm & Giải trình',
+        label: 'Báo cáo đóng góp',
         icon: <BarChart3 className="w-[18px] h-[18px]" />,
         badge: warningCount > 0 ? warningCount : undefined,
         badgeColor: 'bg-rose-500 text-white'
@@ -135,43 +117,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
     // Sinh viên - Thành viên
     navItems = [
       {
-        id: 'landing',
+        id: 'dashboard',
         label: 'Trang chủ',
         icon: <Home className="w-[18px] h-[18px]" />
       },
       {
-        id: 'dashboard',
-        label: 'Tổng quan Đồ án của tôi',
-        icon: <LayoutDashboard className="w-[18px] h-[18px]" />
-      },
-      {
         id: 'matchmaking',
-        label: currentUser?.teamId ? 'Thông tin Nhóm của tôi' : 'Tìm nhóm & Ghép đôi',
-        sublabel: currentUser?.teamId ? 'Thành viên nhóm' : 'So khớp kỹ năng & Lịch rảnh',
+        label: currentUser?.teamId ? 'Nhóm của tôi' : 'Tìm nhóm',
         icon: <Users className="w-[18px] h-[18px]" />
       },
       {
         id: 'kanban',
         label: 'Tiến độ công việc',
-        sublabel: 'Công việc được giao',
         icon: <KanbanSquare className="w-[18px] h-[18px]" />
       },
       {
         id: 'milestones',
-        label: 'Lịch nộp bài học phần',
-        sublabel: 'Theo dõi Deadline',
+        label: 'Cột mốc',
         icon: <CalendarCheck className="w-[18px] h-[18px]" />
       },
       {
         id: 'peer_review',
-        label: 'Đánh giá chéo thành viên',
-        sublabel: 'Bỏ phiếu ẩn danh',
+        label: 'Đánh giá chéo',
         icon: <ClipboardCheck className="w-[18px] h-[18px]" />
       },
       {
         id: 'report',
-        label: 'Điểm đóng góp của tôi',
-        sublabel: 'Minh bạch & Bảo mật',
+        label: 'Báo cáo đóng góp',
         icon: <BarChart3 className="w-[18px] h-[18px]" />
       }
     ];
@@ -201,7 +173,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
           {/* Logo Header */}
           <div className="h-16 px-5 border-b border-slate-100 flex items-center justify-between">
             <button
-              onClick={() => handleNavClick('landing')}
+              onClick={() => handleNavClick('dashboard')}
               className="flex items-center gap-3 text-left group"
             >
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-700 to-blue-500 flex items-center justify-center text-white font-extrabold text-sm shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
@@ -211,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
                 <span className="font-extrabold text-[15px] tracking-tight text-slate-900 leading-tight">
                   UED <span className="text-blue-600">ProjectHub</span>
                 </span>
-                <span className="text-[10px] text-slate-400 font-medium tracking-wide">
+                <span className="text-xs text-slate-500 font-medium tracking-wide">
                   Khoa CNTT • ĐH Sư phạm
                 </span>
               </div>
@@ -220,26 +192,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
 
           {/* Section Category Title tailored by Role */}
           <div className="px-5 pt-4 pb-2 flex items-center justify-between">
-            <span className="text-[10px] font-bold tracking-wider uppercase text-slate-400">
+            <span className="text-xs font-bold tracking-wider uppercase text-slate-500">
               {isLecturer
                 ? 'Quản trị Đồ án (Giảng viên)'
                 : isLeader
                 ? 'Đồ án Nhóm (Trưởng nhóm)'
                 : 'Đồ án Nhóm (Thành viên)'}
             </span>
-            {isLecturer ? (
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                GV
-              </span>
-            ) : isLeader ? (
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Leader
-              </span>
-            ) : (
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                Member
-              </span>
-            )}
           </div>
 
           {/* Nav items list */}
@@ -266,21 +225,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
                     </span>
                     <div className="flex flex-col truncate">
                       <span className="truncate">{item.label}</span>
-                      {item.sublabel && (
-                        <span
-                          className={`text-[10px] font-normal truncate ${
-                            isActive ? 'text-white/80' : 'text-slate-400'
-                          }`}
-                        >
-                          {item.sublabel}
-                        </span>
-                      )}
                     </div>
                   </div>
 
                   {item.badge !== undefined && (
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 ${
+                      className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 ${
                         item.badgeColor || 'bg-slate-200 text-slate-700'
                       }`}
                     >
@@ -320,15 +270,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
                   : 'Thành viên nhóm'}
               </span>
             </div>
-            <span className="text-[10px] font-medium text-slate-500">
+            <span className="text-xs font-medium text-slate-500">
               HK1 2026-27
             </span>
           </div>
 
-          <p className="text-[11px] text-slate-600 leading-snug truncate">
+          <p className="text-xs text-slate-600 leading-snug truncate">
             {currentUser?.name || (isLecturer ? 'TS. Trần Văn B' : 'Nguyễn Văn A')}
             {currentUser?.teamName && !isLecturer && (
-              <span className="text-slate-500 block truncate text-[10px]">
+              <span className="text-slate-500 block truncate text-xs">
                 {currentUser.teamName}
               </span>
             )}

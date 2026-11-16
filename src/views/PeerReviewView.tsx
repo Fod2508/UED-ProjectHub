@@ -183,7 +183,7 @@ export const PeerReviewView: React.FC = () => {
 
             <button
               onClick={() => setIsCriteriaConfigOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
             >
               <Settings className="w-4 h-4" />
               <span>Cấu hình 3 tiêu chí</span>
@@ -211,7 +211,7 @@ export const PeerReviewView: React.FC = () => {
         {/* 4 Stat KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Tỷ lệ nộp phiếu toàn khóa
             </span>
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
@@ -221,7 +221,7 @@ export const PeerReviewView: React.FC = () => {
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
-            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">
+            <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">
               Nhóm đã nộp đủ 100%
             </span>
             <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">
@@ -231,7 +231,7 @@ export const PeerReviewView: React.FC = () => {
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
-            <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1">
+            <span className="text-xs font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1">
               <Clock className="w-3.5 h-3.5" />
               <span>Hạn chót phiên</span>
             </span>
@@ -242,13 +242,13 @@ export const PeerReviewView: React.FC = () => {
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
-            <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">
+            <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
               Trọng số tiêu chí chuẩn
             </span>
             <div className="text-sm font-bold text-indigo-700 mt-2">
               {criteriaWeights.c1}% • {criteriaWeights.c2}% • {criteriaWeights.c3}%
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Tiến độ • Chất lượng • Thái độ</p>
+            <p className="text-xs text-slate-500 mt-1">Tiến độ • Chất lượng • Thái độ</p>
           </div>
         </div>
 
@@ -282,7 +282,7 @@ export const PeerReviewView: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm border-collapse">
               <thead>
-                <tr className="bg-slate-50/50 border-b border-slate-100 text-slate-500 font-semibold uppercase text-[11px]">
+                <tr className="bg-slate-50/50 border-b border-slate-100 text-slate-500 font-semibold uppercase text-xs">
                   <th className="py-3.5 px-6">Tên nhóm đồ án</th>
                   <th className="py-3.5 px-6">Trưởng nhóm</th>
                   <th className="py-3.5 px-6">Tiến độ nộp phiếu</th>
@@ -314,7 +314,7 @@ export const PeerReviewView: React.FC = () => {
                           </div>
                         </div>
                         {item.missing && (
-                          <span className="text-[11px] text-amber-700 mt-0.5 block">
+                          <span className="text-xs text-amber-700 mt-0.5 block">
                             Chưa nộp: <strong>{item.missing}</strong>
                           </span>
                         )}
@@ -420,30 +420,16 @@ export const PeerReviewView: React.FC = () => {
   // ==========================================
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
-      {/* 1. ANONYMOUS SECURITY BANNER (matching Image 13 & user HTML) */}
-      <section className="bg-slate-100/80 border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-600 shadow-xs shrink-0 border border-slate-200">
-            <Lock className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-sm sm:text-base font-bold text-slate-900">
-              Cơ chế đánh giá ẩn danh được bảo vệ
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5 max-w-2xl leading-relaxed">
-              Danh tính của bạn đã được mã hóa hoàn toàn. Điểm số và nhận xét sẽ
-              được tổng hợp dưới dạng số liệu trung bình để gửi đến Giảng viên
-              và nhóm, đảm bảo tính khách quan tuyệt đối.
-            </p>
-          </div>
-        </div>
-
-        <div className="self-stretch sm:self-auto flex items-center justify-end gap-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-blue-700 text-xs font-semibold shadow-2xs whitespace-nowrap">
-            <Clock className="w-3.5 h-3.5 text-blue-600" />
-            <span>Hạn chót: {evaluationDeadline}</span>
-          </div>
-        </div>
+      {/* Ẩn danh + hạn chót */}
+      <section className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+        <span className="inline-flex items-center gap-2">
+          <Lock className="w-4 h-4 text-blue-600" />
+          Danh tính người chấm được ẩn với các thành viên trong nhóm.
+        </span>
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-blue-700 text-xs font-semibold whitespace-nowrap">
+          <Clock className="w-3.5 h-3.5 text-blue-600" />
+          Hạn chót: {evaluationDeadline}
+        </span>
       </section>
 
       {/* REMINDER BANNER - Nhắc nhở sắp hết hạn (kịch bản 3.1) */}
@@ -454,14 +440,8 @@ export const PeerReviewView: React.FC = () => {
               <BellRing className="w-4.5 h-4.5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-amber-900">
-                Thông báo nhắc nhở: Sắp đến hạn đánh giá chéo
-              </h3>
               <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
                 Bạn còn <strong>{pendingCount} phiếu đánh giá</strong> chưa gửi.
-                Hạn chót: <strong>{evaluationDeadline}</strong>. Vui lòng hoàn
-                thành trước khi hết hạn để hệ thống có thể tổng hợp điểm đóng
-                góp.
               </p>
             </div>
           </div>
@@ -479,7 +459,7 @@ export const PeerReviewView: React.FC = () => {
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col">
         {/* MEMBER SELECTOR ROW */}
         <header className="bg-slate-50/90 border-b border-slate-200/80 px-6 py-4 flex flex-wrap items-center gap-3">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
             Chọn thành viên:
           </span>
 
@@ -502,7 +482,7 @@ export const PeerReviewView: React.FC = () => {
                   <span>{item.targetName}</span>
                   {isDone ? (
                     <span
-                      className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-bold ${
                         isSelected
                           ? "bg-blue-500 text-white"
                           : "bg-emerald-100 text-emerald-800"
@@ -512,11 +492,11 @@ export const PeerReviewView: React.FC = () => {
                       Đã xong
                     </span>
                   ) : isSelected ? (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white text-blue-600">
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-white text-blue-600">
                       Đang chấm
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-500">
                       Chưa chấm
                     </span>
                   )}
@@ -594,7 +574,7 @@ export const PeerReviewView: React.FC = () => {
             </div>
 
             <div className="p-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+              <FileText className="w-4 h-4 text-slate-500 shrink-0" />
               <span>
                 <strong className="font-semibold text-slate-900">
                   Ghi chú thực tế:
@@ -704,7 +684,7 @@ export const PeerReviewView: React.FC = () => {
               <label className="text-xs sm:text-sm font-bold text-slate-900 block">
                 Nhận xét và góp ý chi tiết (Không bắt buộc)
               </label>
-              <span className="text-xs text-slate-400">Tối đa 500 ký tự</span>
+              <span className="text-xs text-slate-500">Tối đa 500 ký tự</span>
             </div>
             <p className="text-xs text-slate-500">
               Ý kiến đóng góp xây dựng giúp đồng đội cải thiện kỹ năng chuyên
@@ -827,7 +807,7 @@ const CriteriaConfigModal: React.FC<{
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition"
+            className="p-1 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200 transition"
           >
             <X className="w-5 h-5" />
           </button>

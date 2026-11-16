@@ -148,7 +148,7 @@ interface AppContextType {
   evaluationDeadline: string;
   extendEvaluationDeadline: (newDeadline: string) => void;
 
-  // Contribution & Anti Free-rider report (Giai đoạn 3)
+  // Contribution & Anti thành viên đóng góp thấp report (Giai đoạn 3)
   groupReport: GroupReportData;
   setLecturerInstruction: (text: string) => void;
   approveAllScores: () => void;
@@ -319,6 +319,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
+    // Vai mẫu không đăng nhập Firebase: giữ dữ liệu mẫu, không gọi Firestore
+    if (!auth.currentUser) return;
+
     console.log("🔄 Subscribing to tasks for group:", currentUser.teamId);
 
     const unsubscribe = taskService.subscribeToGroupTasks(
@@ -342,6 +345,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       setMilestones([]);
       return;
     }
+
+    // Vai mẫu không đăng nhập Firebase: giữ dữ liệu mẫu, không gọi Firestore
+    if (!auth.currentUser) return;
 
     // For demo, we use a fixed courseId
     const courseId = "course_2024_2025";
@@ -379,6 +385,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       currentUser.teamId,
     );
 
+    // Vai mẫu không đăng nhập Firebase: giữ dữ liệu mẫu, không gọi Firestore
+    if (!auth.currentUser) return;
+
     const unsubscribe = applicationService.subscribeToGroupApplications(
       currentUser.teamId,
       (updatedApplications) => {
@@ -400,6 +409,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       setPeerReviews([]);
       return;
     }
+
+    // Vai mẫu không đăng nhập Firebase: giữ dữ liệu mẫu, không gọi Firestore
+    if (!auth.currentUser) return;
 
     // For demo, we'll use a fixed milestone "m2" (Cột mốc 2)
     const milestoneId = "m2";
@@ -865,7 +877,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   // Team count: 0 if user is logged in without team, actual count if has team, 2+accepted if in demo mode
   const currentTeamCount = currentUser
     ? currentUser.teamId
-      ? teamMembersCount || 1
+      ? teamMembersCount ||
+        classGroups.find((g) => g.id === currentUser.teamId)?.memberCount ||
+        1
       : 0
     : 2 + applicants.filter((a) => a.status === "accepted").length;
 
@@ -971,7 +985,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         newApp,
       );
       showToast(
-        "Đã gửi yêu cầu tham gia nhóm thành công! Trạng thái: Chờ duyệt (Pending).",
+        "Đã gửi yêu cầu tham gia nhóm thành công! Trạng thái: Chờ duyệt.",
         "success",
       );
       addNotification({
@@ -1419,7 +1433,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       // Realtime listener will update UI automatically
     } catch (error) {
       console.error("Error moving task:", error);
-      showToast("Lỗi khi cập nhật trạng thái task.", "error");
+      showToast("Lỗi khi cập nhật trạng thái công việc.", "error");
     }
   };
 
@@ -1435,10 +1449,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         currentUser.teamId,
         currentUser.id,
       );
-      showToast(`Đã tạo tác vụ mới: ${taskData.title} (${code})`, "success");
+      showToast(`Đã tạo công việc mới: ${taskData.title} (${code})`, "success");
       addNotification({
-        title: "Phân công nhiệm vụ mới trên Kanban",
-        message: `Tác vụ '${taskData.title}' (${code}) đã được giao cho ${taskData.assigneeName}. Hạn hoàn thành: ${taskData.dueDate}`,
+        title: "Phân công nhiệm vụ mới trên bảng tiến độ",
+        message: `Công việc '${taskData.title}' (${code}) đã được giao cho ${taskData.assigneeName}. Hạn hoàn thành: ${taskData.dueDate}`,
         type: "task_assigned",
         targetScreen: "kanban",
         recipientRole: "student",
@@ -1446,7 +1460,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       // Realtime listener will update UI automatically
     } catch (error) {
       console.error("Error creating task:", error);
-      showToast("Lỗi khi tạo task mới.", "error");
+      showToast("Lỗi khi tạo công việc mới.", "error");
     }
   };
 
@@ -1456,25 +1470,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       // Realtime listener will update UI automatically
     } catch (error) {
       console.error("Error updating task:", error);
-      showToast("Lỗi khi cập nhật task.", "error");
+      showToast("Lỗi khi cập nhật công việc.", "error");
     }
   };
 
   const deleteTask = async (taskId: string) => {
     try {
       await taskService.deleteTask(taskId);
-      showToast("Đã xóa tác vụ.", "info");
+      showToast("Đã xóa công việc.", "info");
       // Realtime listener will update UI automatically
     } catch (error) {
       console.error("Error deleting task:", error);
-      showToast("Lỗi khi xóa task.", "error");
+      showToast("Lỗi khi xóa công việc.", "error");
     }
   };
 
   // Milestone management
   const addMilestone = async (item: Omit<Milestone, "id">) => {
     if (!currentUser?.id) {
-      showToast("Bạn cần đăng nhập để tạo milestone.", "warning");
+      showToast("Bạn cần đăng nhập để tạo cột mốc.", "warning");
       return;
     }
 
@@ -1536,7 +1550,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     addNotification({
       title: "Công bố Cột mốc nộp bài",
       message:
-        "Giảng viên đã công bố các Cột mốc nộp bài và mở khóa bảng tiến độ Kanban cho toàn khóa.",
+        "Giảng viên đã công bố các Cột mốc nộp bài và mở khóa bảng tiến độ cho toàn khóa.",
       type: "milestone_published",
       targetScreen: "milestones",
       recipientRole: "student",
@@ -1772,7 +1786,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         addNotification({
           title: "Kích hoạt phiên Đánh giá chéo thành viên",
           message:
-            "Cột mốc kết thúc. Phiên Đánh giá chéo thành viên ẩn danh đã được mở để ghi nhận đóng góp và chống Free-rider.",
+            "Cột mốc kết thúc. Phiên Đánh giá chéo thành viên ẩn danh đã được mở để ghi nhận đóng góp và phát hiện thành viên đóng góp thấp.",
           type: "peer_review_open",
           targetScreen: "peer_review",
           recipientRole: "student",

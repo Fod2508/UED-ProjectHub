@@ -119,6 +119,11 @@ export const MilestonesView: React.FC = () => {
       return;
     }
 
+    if (selectedMilestoneForSubmit.status !== "Đang mở") {
+      showToast("Cột mốc này không trong thời gian nộp bài.", "warning");
+      return;
+    }
+
     if (!currentUser.isGroupLeader) {
       showToast("Chỉ Trưởng nhóm mới được nộp hoặc sửa bài cột mốc.", "warning");
       return;
@@ -193,20 +198,12 @@ export const MilestonesView: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-                Cột mốc &amp; Kế hoạch nộp bài
+                Cột mốc
               </h1>
               <p className="text-xs sm:text-sm text-slate-500">
                 Theo dõi tiến độ đề cương môn học và các mốc kiểm soát nội bộ nhóm.
               </p>
             </div>
-
-            <button
-              onClick={() => setCurrentScreen("kanban")}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition flex items-center gap-2 shadow-xs cursor-pointer self-start sm:self-auto"
-            >
-              <span>Xem Bảng công việc</span>
-              <Rocket className="w-4 h-4" />
-            </button>
           </div>
 
           {/* SECTION 1: Cột mốc Đề cương Học phần (Giảng viên) */}
@@ -220,7 +217,7 @@ export const MilestonesView: React.FC = () => {
                   <h2 className="text-sm sm:text-base font-bold text-slate-900">
                     Cột mốc Học phần chính thức
                   </h2>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-xs text-slate-500">
                     Khung đề cương môn học do Giảng viên công bố (Tổng trọng số: 100%)
                   </p>
                 </div>
@@ -234,7 +231,7 @@ export const MilestonesView: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-xs sm:text-sm">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-semibold uppercase text-[11px] tracking-wider">
+                  <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-semibold uppercase text-xs tracking-wider">
                     <th className="py-3.5 px-6">Cột mốc</th>
                     <th className="py-3.5 px-6">Sản phẩm yêu cầu</th>
                     <th className="py-3.5 px-6">Hạn nộp</th>
@@ -263,7 +260,7 @@ export const MilestonesView: React.FC = () => {
                           <div className="font-bold text-slate-900">
                             {m.name}
                           </div>
-                          <div className="text-xs text-slate-400 mt-0.5">
+                          <div className="text-xs text-slate-500 mt-0.5">
                             {m.phase}
                           </div>
                         </td>
@@ -280,7 +277,7 @@ export const MilestonesView: React.FC = () => {
                                 : "text-slate-600"
                             }`}
                           >
-                            <Calendar className="w-4 h-4 text-slate-400" />
+                            <Calendar className="w-4 h-4 text-slate-500" />
                             <span>{m.dueDate}</span>
                           </div>
                         </td>
@@ -336,7 +333,7 @@ export const MilestonesView: React.FC = () => {
                                     : mySubmission.status}
                                 </span>
                               </button>
-                              {isGroupLeader && (
+                              {isGroupLeader && isSprintActive && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -352,6 +349,10 @@ export const MilestonesView: React.FC = () => {
                                 </button>
                               )}
                             </div>
+                          ) : currentUser?.teamId && isGroupLeader && !isSprintActive ? (
+                            <span className="text-xs text-slate-500 italic">
+                              {m.status === "Chưa mở" ? "Chưa đến thời gian nộp" : "Đã hết hạn nộp"}
+                            </span>
                           ) : currentUser?.teamId && isGroupLeader ? (
                             <button
                               type="button"
@@ -372,7 +373,7 @@ export const MilestonesView: React.FC = () => {
                               Trưởng nhóm sẽ nộp bài
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-400 italic">
+                            <span className="text-xs text-slate-500 italic">
                               Cần vào nhóm để nộp
                             </span>
                           )}
@@ -396,7 +397,7 @@ export const MilestonesView: React.FC = () => {
               <strong className="text-blue-700 font-semibold">
                 Đánh giá chéo thành viên
               </strong>{" "}
-              nhằm ghi nhận đóng góp công bằng và tự động cảnh báo Free-rider.
+              nhằm ghi nhận đóng góp công bằng và tự động cảnh báo thành viên đóng góp thấp.
             </p>
           </div>
 
@@ -414,7 +415,7 @@ export const MilestonesView: React.FC = () => {
                       <span className="text-blue-600">({currentUser.teamName})</span>
                     )}
                   </h2>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-xs text-slate-500">
                     Mốc tự kiểm soát tiến độ trước ngày nộp bài cho Giảng viên (Không ảnh hưởng trọng số đề cương)
                   </p>
                 </div>
@@ -423,7 +424,7 @@ export const MilestonesView: React.FC = () => {
               {allowInternalMilestone && currentUser?.teamId && currentUser?.isGroupLeader && (
                 <button
                   onClick={() => setIsAddMilestoneModalOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>Tạo mốc nội bộ</span>
@@ -451,10 +452,10 @@ export const MilestonesView: React.FC = () => {
                 <p>Nhóm chưa thiết lập cột mốc nộp bài nội bộ nào.</p>
                 {currentUser?.isGroupLeader ? (
                   <p className="text-emerald-700 font-medium">
-                    Bạn là Trưởng nhóm — bấm nút <strong>"Tạo mốc nội bộ"</strong> ở trên để tạo sprint nội bộ cho nhóm.
+                    Bạn là Trưởng nhóm — bấm nút <strong>"Tạo mốc nội bộ"</strong> ở trên để tạo cột mốc nội bộ cho nhóm.
                   </p>
                 ) : (
-                  <p className="text-slate-400">
+                  <p className="text-slate-500">
                     Trưởng nhóm có thể tạo các mốc kiểm tra nội bộ trước ngày nộp bài chính thức.
                   </p>
                 )}
@@ -463,7 +464,7 @@ export const MilestonesView: React.FC = () => {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-xs sm:text-sm">
                   <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-semibold uppercase text-[11px] tracking-wider">
+                    <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-semibold uppercase text-xs tracking-wider">
                       <th className="py-3.5 px-6">Mốc nội bộ</th>
                       <th className="py-3.5 px-6">Mục tiêu &amp; Sản phẩm</th>
                       <th className="py-3.5 px-6">Hạn hoàn thành nội bộ</th>
@@ -478,7 +479,7 @@ export const MilestonesView: React.FC = () => {
                       <tr key={im.id} className="hover:bg-slate-50/60 transition">
                         <td className="py-4 px-6 align-top">
                           <div className="font-bold text-slate-900">{im.name}</div>
-                          <div className="text-xs text-slate-400 mt-0.5">{im.phase}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{im.phase}</div>
                         </td>
                         <td className="py-4 px-6 align-top max-w-xs">
                           <p className="text-slate-700 leading-snug">{im.deliverables}</p>
@@ -581,7 +582,7 @@ export const MilestonesView: React.FC = () => {
             <div className="p-3.5 bg-emerald-50/80 border border-emerald-200/90 rounded-xl flex items-start gap-2.5 text-xs text-emerald-800">
               <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <span>
-                <strong>Đang bật quyền tự tạo mốc nội bộ:</strong> Trưởng các nhóm được phép thiết lập các mốc kiểm tra nội bộ (Internal Sprints) để đôn đốc nhóm hoàn thành trước ngày nộp bài chính thức. Mốc nội bộ không ảnh hưởng đến khung 100% trọng số điểm học phần.
+                <strong>Đang bật quyền tự tạo mốc nội bộ:</strong> Trưởng các nhóm được phép thiết lập các mốc kiểm tra nội bộ để đôn đốc nhóm hoàn thành trước ngày nộp bài chính thức. Mốc nội bộ không ảnh hưởng đến khung 100% trọng số điểm học phần.
               </span>
             </div>
           ) : (
@@ -622,7 +623,7 @@ export const MilestonesView: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-xs sm:text-sm">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-semibold uppercase text-[11px] tracking-wider">
+                  <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-semibold uppercase text-xs tracking-wider">
                     <th className="py-3.5 px-6">Cột mốc</th>
                     <th className="py-3.5 px-6">Sản phẩm yêu cầu</th>
                     <th className="py-3.5 px-6">Hạn nộp</th>
@@ -647,7 +648,7 @@ export const MilestonesView: React.FC = () => {
                           <div className="font-bold text-slate-900">
                             {m.name}
                           </div>
-                          <div className="text-xs text-slate-400 mt-0.5">
+                          <div className="text-xs text-slate-500 mt-0.5">
                             {m.phase}
                           </div>
                         </td>
@@ -668,7 +669,7 @@ export const MilestonesView: React.FC = () => {
                                 : "text-slate-600"
                             }`}
                           >
-                            <Calendar className="w-4 h-4 text-slate-400" />
+                            <Calendar className="w-4 h-4 text-slate-500" />
                             <span>{m.dueDate}</span>
                           </div>
                         </td>
@@ -689,7 +690,7 @@ export const MilestonesView: React.FC = () => {
                               />
                               <button
                                 onClick={() => handleSaveEditWeight(m.id)}
-                                className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold"
+                                className="px-2 py-0.5 rounded bg-blue-600 text-white text-xs font-bold"
                               >
                                 Lưu
                               </button>
@@ -828,7 +829,7 @@ export const MilestonesView: React.FC = () => {
               <strong className="text-blue-700 font-semibold">
                 Đánh giá chéo
               </strong>{" "}
-              thành viên để phát hiện Free-rider.
+              thành viên để phát hiện thành viên đóng góp thấp.
             </p>
           </div>
 
@@ -839,7 +840,7 @@ export const MilestonesView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <PlusCircle className="w-4 h-4 text-emerald-600" />
                   <h3 className="text-sm font-bold text-slate-800">
-                    Theo dõi Kế hoạch Sprint Nội bộ của các Nhóm ({allInternalMilestones.length} mốc)
+                    Theo dõi Cột mốc nội bộ của các Nhóm ({allInternalMilestones.length} mốc)
                   </h3>
                 </div>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
@@ -848,14 +849,14 @@ export const MilestonesView: React.FC = () => {
               </div>
 
               {allInternalMilestones.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-400">
+                <div className="p-6 text-center text-xs text-slate-500">
                   Chưa có nhóm nào thiết lập mốc nội bộ riêng. Các nhóm đang bám sát tiến độ đề cương chung.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-left text-xs sm:text-sm">
                     <thead>
-                      <tr className="bg-slate-50/50 border-b border-slate-100 text-slate-500 font-semibold uppercase text-[11px]">
+                      <tr className="bg-slate-50/50 border-b border-slate-100 text-slate-500 font-semibold uppercase text-xs">
                         <th className="py-3 px-6">Nhóm thực hiện</th>
                         <th className="py-3 px-6">Mốc nội bộ</th>
                         <th className="py-3 px-6">Sản phẩm yêu cầu</th>
@@ -921,7 +922,7 @@ export const MilestonesView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedMilestoneForSubmit(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition"
+                className="p-1 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1024,7 +1025,7 @@ export const MilestonesView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedMilestoneForView(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition"
+                className="p-1 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1034,7 +1035,7 @@ export const MilestonesView: React.FC = () => {
               {viewableSubmissions.length === 0 ? (
                 <div className="p-8 text-center text-slate-500 text-xs sm:text-sm space-y-2">
                   <p className="font-medium text-slate-700">Chưa có bài nộp nào cho cột mốc này.</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     Trưởng nhóm có thể bấm nút <strong>"Nộp bài tiến độ"</strong> ở bảng cột mốc để gửi báo cáo &amp; link sản phẩm.
                   </p>
                 </div>

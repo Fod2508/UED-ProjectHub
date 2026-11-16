@@ -72,7 +72,7 @@ export const ContributionReportView: React.FC = () => {
                 <User className="w-4 h-4" />
               </div>
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-                Điểm đóng góp của tôi
+                Báo cáo đóng góp
               </h1>
             </div>
             <p className="text-xs sm:text-sm text-slate-500">
@@ -97,7 +97,7 @@ export const ContributionReportView: React.FC = () => {
                   <h2 className="text-base font-bold text-slate-900">
                     {myMemberData.name}
                   </h2>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-500">
                     {myMemberData.studentId} • Nhóm 04
                   </span>
                 </div>
@@ -149,7 +149,7 @@ export const ContributionReportView: React.FC = () => {
                   >
                     {myMemberData.peerScoreAvg}
                   </span>
-                  <span className="text-sm text-slate-400">/ 5.0</span>
+                  <span className="text-sm text-slate-500">/ 5.0</span>
                 </div>
                 <p className="text-xs text-slate-500">
                   Từ {groupReport.members.length - 1} thành viên khác (Ẩn danh)
@@ -208,6 +208,18 @@ export const ContributionReportView: React.FC = () => {
             </div>
           </div>
 
+          {/* Nhận xét ẩn danh từ thành viên trong nhóm (UC26) */}
+          {myMemberData.anonymousComment && (
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 space-y-2">
+              <h3 className="text-sm font-bold text-slate-900">
+                Nhận xét ẩn danh từ thành viên trong nhóm
+              </h3>
+              <p className="text-sm text-slate-600 italic">
+                “{myMemberData.anonymousComment}”
+              </p>
+            </div>
+          )}
+
           {/* Info Notice */}
           <div className="bg-blue-50/80 border border-blue-200/90 rounded-xl p-4 flex items-start gap-3 text-slate-600 text-xs leading-relaxed">
             <ShieldAlert className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
@@ -251,14 +263,14 @@ export const ContributionReportView: React.FC = () => {
                   <h3 className="text-sm font-bold text-rose-950">
                     Chỉ thị từ Giảng viên hướng dẫn: {groupReport.status}
                   </h3>
-                  <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-[10px] font-bold">
+                  <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-xs font-bold">
                     Cần xử lý
                   </span>
                 </div>
                 <p className="text-xs text-rose-800 leading-relaxed bg-white/70 p-3 rounded-xl border border-rose-200">
                   "{groupReport.lecturerInstruction}"
                 </p>
-                <p className="text-[11px] text-rose-700">
+                <p className="text-xs text-rose-700">
                   Trưởng nhóm và thành viên liên quan vui lòng nộp văn bản giải trình hoặc thực hiện bỏ phiếu lại theo chỉ dẫn của Giảng viên trước thời hạn.
                 </p>
               </div>
@@ -276,7 +288,7 @@ export const ContributionReportView: React.FC = () => {
                 <User className="w-4 h-4" />
               </div>
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-                Điểm đóng góp của tôi
+                Báo cáo đóng góp
               </h1>
             </div>
             <p className="text-xs sm:text-sm text-slate-500">
@@ -294,7 +306,7 @@ export const ContributionReportView: React.FC = () => {
                   <h2 className="text-base font-bold text-slate-900">
                     {currentUser?.name || "Sinh viên"}
                   </h2>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-500">
                     {currentUser?.code || "Mã SV"} • {currentUser?.teamName || "Chưa tham gia nhóm"}
                   </span>
                 </div>
@@ -321,7 +333,7 @@ export const ContributionReportView: React.FC = () => {
                 <span className="text-xs font-semibold text-slate-500 uppercase">
                   Điểm đánh giá chéo TB
                 </span>
-                <div className="text-2xl font-extrabold text-slate-400 tabular-nums">
+                <div className="text-2xl font-extrabold text-slate-500 tabular-nums">
                   --
                 </div>
                 <p className="text-xs text-slate-500">
@@ -375,7 +387,7 @@ export const ContributionReportView: React.FC = () => {
             <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Tổng số nhóm đồ án
                   </span>
                   <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 tabular-nums">
@@ -400,7 +412,7 @@ export const ContributionReportView: React.FC = () => {
             <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Tiến độ đánh giá chéo
                   </span>
                   <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
@@ -413,7 +425,7 @@ export const ContributionReportView: React.FC = () => {
               </div>
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
                 <span>Tất cả thành viên đã gửi phiếu</span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-semibold">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
                   Đã chốt sổ
                 </span>
@@ -424,7 +436,7 @@ export const ContributionReportView: React.FC = () => {
             <div className="bg-white p-5 rounded-2xl border-2 border-rose-300 shadow-xs flex flex-col justify-between space-y-3 bg-gradient-to-br from-white via-rose-50/20 to-rose-50/40">
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider flex items-center gap-1">
+                  <span className="text-xs font-bold text-rose-600 uppercase tracking-wider flex items-center gap-1">
                     <span>Cảnh báo thiếu đóng góp</span>
                   </span>
                   <div className="text-2xl sm:text-3xl font-extrabold text-rose-600 mt-1 tabular-nums">
@@ -439,7 +451,7 @@ export const ContributionReportView: React.FC = () => {
                 <span className="text-rose-700 font-medium">
                   Đóng góp &lt; 50% hoặc điểm &lt; 2.5
                 </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-600 text-white text-[11px] font-bold">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-600 text-white text-xs font-bold">
                   ● Cần can thiệp
                 </span>
               </div>
@@ -453,7 +465,7 @@ export const ContributionReportView: React.FC = () => {
               <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-800">
                 <Users className="w-4 h-4 text-blue-600" />
                 <span>Nhóm 04 - Hệ thống Quản lý Đồ án (Đang xem)</span>
-                <ChevronDown className="w-4 h-4 text-slate-400" />
+                <ChevronDown className="w-4 h-4 text-slate-500" />
               </div>
 
               {/* Toggle only warning */}
@@ -500,7 +512,7 @@ export const ContributionReportView: React.FC = () => {
                   Chi tiết đóng góp - Nhóm 04
                 </h2>
               </div>
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-slate-500">
                 4 thành viên • Hệ thống Quản lý Đồ án
               </span>
             </div>
@@ -508,7 +520,7 @@ export const ContributionReportView: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-xs sm:text-sm">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-semibold uppercase text-[11px] tracking-wider">
+                  <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-semibold uppercase text-xs tracking-wider">
                     <th className="py-3.5 px-6">Thành viên</th>
                     <th className="py-3.5 px-6">Vai trò đảm nhận</th>
                     <th className="py-3.5 px-6">Tỷ lệ hoàn thành</th>
@@ -554,7 +566,7 @@ export const ContributionReportView: React.FC = () => {
                                   <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
                                 )}
                               </div>
-                              <span className="text-[11px] text-slate-400">
+                              <span className="text-xs text-slate-500">
                                 {mem.studentId}{" "}
                                 {mem.name.includes("Nguyễn Văn A") &&
                                   "• Trưởng nhóm"}
@@ -583,7 +595,7 @@ export const ContributionReportView: React.FC = () => {
                               >
                                 {mem.completionRate}%
                               </strong>
-                              <span className="text-slate-400 text-[11px]">
+                              <span className="text-slate-500 text-xs">
                                 {mem.completedTasks}/{mem.totalTasks} công việc{" "}
                                 {mem.hasOverdueTask && "(1 việc trễ hạn)"}
                               </span>
@@ -616,7 +628,7 @@ export const ContributionReportView: React.FC = () => {
                               >
                                 {mem.peerScoreAvg}
                               </span>
-                              <span className="text-xs text-slate-400">
+                              <span className="text-xs text-slate-500">
                                 / 5.0
                               </span>
                               {mem.peerScoreAvg >= 4.5 ? (
@@ -626,7 +638,7 @@ export const ContributionReportView: React.FC = () => {
                               ) : null}
                             </div>
                             {isWarningRow && (
-                              <span className="text-[10px] text-rose-600 font-semibold">
+                              <span className="text-xs text-rose-600 font-semibold">
                                 Dưới mức chuẩn
                               </span>
                             )}
@@ -735,13 +747,13 @@ export const ContributionReportView: React.FC = () => {
                   <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
                     Quyết định xử lý - Nhóm 04
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     Ghi chú sẽ gửi đến Trưởng nhóm và thành viên liên quan
                   </p>
                 </div>
               </div>
 
-              <span className="text-xs text-slate-400 hidden sm:inline">
+              <span className="text-xs text-slate-500 hidden sm:inline">
                 Đã nhập {instructionText.length} / 500 ký tự
               </span>
             </div>
@@ -763,7 +775,7 @@ export const ContributionReportView: React.FC = () => {
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 flex items-center gap-1.5">
-              <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+              <Mail className="w-4 h-4 text-slate-500 shrink-0" />
               <span>Gửi thông báo qua cổng thông tin và email sinh viên.</span>
             </div>
 

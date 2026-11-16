@@ -109,7 +109,7 @@ export const UNASSIGNED_STUDENTS: TestStudentAccount[] = [
     title: "Sinh viên (Chưa có nhóm)",
     avatarText: "DA",
     specialty: "Mobile Flutter & React Native",
-    skills: ["Mobile (Flutter/React Native)", "API Integration"],
+    skills: ["Mobile (Flutter/React Native)", "Tích hợp API"],
     isGroupLeader: false,
   },
   {
@@ -245,7 +245,7 @@ export const DEMO_CLASS_GROUPS: ClassGroupSummary[] = [
     memberCount: 3,
     maxMembers: 4,
     status: "Đang tuyển thành viên",
-    missingSkills: ["Mobile (Flutter/React Native)", "API Integration"],
+    missingSkills: ["Mobile (Flutter/React Native)", "Tích hợp API"],
     kanbanProgress: 60,
     members: [
       { name: "Lê Tuấn Anh", role: "Trưởng nhóm / AI Engineer", avatar: "TA" },
@@ -322,10 +322,10 @@ export const INITIAL_SCHEDULE_MATRIX: FreeScheduleMatrix = {
 export const INITIAL_APPLICANTS: CandidateApplicant[] = [
   {
     id: "app_1",
-    name: "Nguyễn Văn A",
-    studentId: "211150531201",
+    name: "Phan Thanh Tùng",
+    studentId: "211150531230",
     className: "21CNTT1",
-    avatarText: "NA",
+    avatarText: "PT",
     skills: [
       "Frontend (React)",
       "Thiết kế UI/UX",
@@ -498,7 +498,7 @@ export const INITIAL_TASKS: KanbanTask[] = [
     priority: "Thường",
     dueDate: "01/11/2026",
     assigneeName: "Cả nhóm",
-    assigneeAvatar: "ALL",
+    assigneeAvatar: "CN",
     status: "Hoàn thành",
     lecturerReviewed: true,
     lecturerScore: 9.5,
@@ -554,7 +554,7 @@ export const INITIAL_MILESTONES: Milestone[] = [
   {
     id: "m4",
     name: "Cột mốc 4: Bảo vệ đồ án chính thức",
-    phase: "Hội đồng chấm khóa luận tốt nghiệp",
+    phase: "Bảo vệ trước hội đồng chấm đồ án",
     deliverables: "Bài trình chiếu báo cáo và video chạy thử hoàn chỉnh",
     dueDate: "15/01/2027",
     weight: 30,
@@ -692,12 +692,12 @@ export const INITIAL_GROUP_REPORT: GroupReportData = {
       hasOverdueTask: true,
       peerScoreAvg: 2.1,
       criteriaScores: { c1: 1.8, c2: 2.4, c3: 2.2 },
-      anonymousComment: "Bạn Cúc có chuyên môn backend tốt, tuy nhiên thường xuyên chậm cập nhật tiến độ và để quá hạn task xác thực JWT làm ảnh hưởng đến tiến độ tích hợp chung của nhóm.",
+      anonymousComment: "Bạn Cúc có chuyên môn backend tốt, tuy nhiên thường xuyên chậm cập nhật tiến độ và để quá hạn công việc xác thực JWT làm ảnh hưởng đến tiến độ tích hợp chung của nhóm.",
       contributionScore: 38,
       status: "Cảnh báo thiếu đóng góp",
       isWarning: true,
       warningReason:
-        "Điểm đóng góp 38% (< 50%) và Điểm đánh giá chéo 2.1/5 (< 2.5), trễ hạn 1 task cốt lõi",
+        "Điểm đóng góp 38% (< 50%) và Điểm đánh giá chéo 2.1/5 (< 2.5), trễ hạn 1 công việc cốt lõi",
     },
   ],
 };
@@ -705,9 +705,9 @@ export const INITIAL_GROUP_REPORT: GroupReportData = {
 export const INITIAL_NOTIFICATIONS: AppNotification[] = [
   {
     id: "notif_01",
-    title: "Công bố Cột mốc nộp bài Sprint 2",
+    title: "Công bố Cột mốc nộp bài số 2",
     message:
-      "Giảng viên đã công bố Cột mốc 2: Báo cáo giữa kỳ & Bản mẫu thử nghiệm. Bảng tiến độ Kanban đã mở khóa.",
+      "Giảng viên đã công bố Cột mốc 2: Báo cáo giữa kỳ & Bản mẫu thử nghiệm. Bảng tiến độ đã mở khóa.",
     type: "milestone_published",
     createdAt: "10 phút trước",
     timestamp: Date.now() - 10 * 60 * 1000,
@@ -717,9 +717,9 @@ export const INITIAL_NOTIFICATIONS: AppNotification[] = [
   },
   {
     id: "notif_02",
-    title: "Phân công nhiệm vụ mới trên Kanban",
+    title: "Phân công nhiệm vụ mới trên bảng tiến độ",
     message:
-      "Bạn được giao thực hiện tác vụ: '#TSK-06: Mô tả 6 biểu đồ UML (Use Case, Activity, State)'. Hạn chót: 16/12/2026.",
+      "Bạn được giao thực hiện công việc: '#TSK-06: Mô tả 6 biểu đồ UML (Use Case, Activity, State)'. Hạn chót: 16/12/2026.",
     type: "task_assigned",
     createdAt: "30 phút trước",
     timestamp: Date.now() - 30 * 60 * 1000,
@@ -729,9 +729,9 @@ export const INITIAL_NOTIFICATIONS: AppNotification[] = [
   },
   {
     id: "notif_03",
-    title: "⚠️ Cảnh báo tác vụ quá hạn",
+    title: "⚠️ Cảnh báo công việc quá hạn",
     message:
-      "Tác vụ '#TSK-04: Hoàn thiện API xác thực JWT' đã vượt quá deadline (17/12/2026) mà chưa hoàn thành.",
+      "Công việc '#TSK-04: Hoàn thiện API xác thực JWT' đã vượt quá deadline (17/12/2026) mà chưa hoàn thành.",
     type: "task_overdue",
     createdAt: "2 giờ trước",
     timestamp: Date.now() - 2 * 3600 * 1000,
@@ -755,7 +755,7 @@ export const INITIAL_NOTIFICATIONS: AppNotification[] = [
     id: "notif_05",
     title: "Yêu cầu gia nhập nhóm được phê duyệt",
     message:
-      "Chúc mừng! Bạn đã chính thức là thành viên của 'Nhóm 04 - Web App'. Hãy bắt đầu nhận task trên Kanban.",
+      "Chúc mừng! Bạn đã chính thức là thành viên của 'Nhóm 04 - Web App'. Hãy bắt đầu nhận việc trên bảng tiến độ.",
     type: "team_approved",
     createdAt: "3 ngày trước",
     timestamp: Date.now() - 3 * 24 * 3600 * 1000,
@@ -765,9 +765,9 @@ export const INITIAL_NOTIFICATIONS: AppNotification[] = [
   },
   {
     id: "notif_06",
-    title: "Báo cáo đóng góp đồ án: Phát hiện Free-rider",
+    title: "Báo cáo đóng góp đồ án: Phát hiện thành viên đóng góp thấp",
     message:
-      "Hệ thống đã tổng hợp Báo cáo Sprint 2 của Nhóm 04: Sinh viên Lê Văn Cúc (38% đóng góp) bị gắn cờ Cảnh báo.",
+      "Hệ thống đã tổng hợp Báo cáo Cột mốc 2 của Nhóm 04: Sinh viên Lê Văn Cúc (38% đóng góp) bị gắn cờ Cảnh báo.",
     type: "report_ready",
     createdAt: "15 phút trước",
     timestamp: Date.now() - 15 * 60 * 1000,

@@ -98,13 +98,8 @@ export const MatchmakingView: React.FC = () => {
   const timeSlots: TimeSlot[] = ["Sáng", "Chiều", "Tối"];
 
   // User input for candidate skills & proposal
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([
-    "Frontend (React)",
-    "Thiết kế UI/UX",
-  ]);
-  const [userNote, setUserNote] = useState<string>(
-    "Em có kinh nghiệm React, Tailwind CSS và Figma, mong muốn cùng nhóm làm đồ án đạt điểm cao!",
-  );
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [userNote, setUserNote] = useState<string>("");
 
   const availableSkillsList = [
     "Frontend (React)",
@@ -156,6 +151,11 @@ export const MatchmakingView: React.FC = () => {
       return;
     }
 
+    if (selectedSkills.length === 0) {
+      showToast("Hãy chọn ít nhất một kỹ năng trước khi tìm nhóm.", "warning");
+      return;
+    }
+
     setHasSearched(true);
     const results = await findMatchingGroups(selectedSkills, scheduleMatrix);
     setMatchingGroups(results);
@@ -167,7 +167,7 @@ export const MatchmakingView: React.FC = () => {
       );
     } else if (results.length > 0) {
       showToast(
-        `Tìm thấy ${results.length} nhóm (độ phù hợp lịch rảnh: ${results[0].matchScore}%).`,
+        `Tìm thấy ${results.length} nhóm còn chỗ. Điểm phù hợp cao nhất: ${results[0].matchScore}%.`,
         "info",
       );
     }
@@ -180,6 +180,11 @@ export const MatchmakingView: React.FC = () => {
         `Bạn đã tham gia nhóm (${currentUser?.teamName}). Mỗi sinh viên chỉ được tạo hoặc thuộc 1 nhóm đồ án!`,
         "warning",
       );
+      return;
+    }
+
+    if (selectedSkills.length === 0) {
+      showToast("Hãy chọn ít nhất một kỹ năng trước khi tạo nhóm.", "warning");
       return;
     }
 
@@ -254,11 +259,11 @@ export const MatchmakingView: React.FC = () => {
               className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
             >
               <span>Xem Tiến độ công việc chung</span>
-              <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+              <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
             </button>
             <button
               onClick={() => setCurrentScreen("milestones")}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <span>Quản lý Cột mốc nộp bài</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -269,7 +274,7 @@ export const MatchmakingView: React.FC = () => {
         {/* 4 Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Tổng số nhóm đồ án
             </span>
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
@@ -279,7 +284,7 @@ export const MatchmakingView: React.FC = () => {
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
-            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">
+            <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">
               <span>Đã đủ thành viên</span>
             </span>
             <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">
@@ -289,7 +294,7 @@ export const MatchmakingView: React.FC = () => {
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
-            <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1">
+            <span className="text-xs font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1">
               <span>Đang tuyển bổ sung</span>
             </span>
             <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1">
@@ -299,7 +304,7 @@ export const MatchmakingView: React.FC = () => {
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
-            <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">
+            <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
               Tỷ lệ lấp đầy chỗ trong nhóm
             </span>
             <div className="text-2xl sm:text-3xl font-extrabold text-indigo-700 mt-1">
@@ -314,7 +319,7 @@ export const MatchmakingView: React.FC = () => {
         {/* Filter and Search Bar */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400" />
+            <Filter className="w-4 h-4 text-slate-500" />
             <div className="flex items-center p-1 bg-slate-100 rounded-xl text-xs font-semibold">
               <button
                 onClick={() => setLecturerFilter("all")}
@@ -350,7 +355,7 @@ export const MatchmakingView: React.FC = () => {
           </div>
 
           <div className="relative min-w-[260px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={lecturerSearch}
@@ -378,7 +383,7 @@ export const MatchmakingView: React.FC = () => {
                         {group.name}
                       </span>
                       <span
-                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                        className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
                           isFull
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                             : "bg-amber-50 text-amber-700 border-amber-200"
@@ -405,17 +410,17 @@ export const MatchmakingView: React.FC = () => {
                         <span>{group.leaderName}</span>
                         <Crown className="w-3.5 h-3.5 text-amber-500" />
                       </div>
-                      <span className="text-[11px] text-slate-400">{group.leaderEmail}</span>
+                      <span className="text-xs text-slate-500">{group.leaderEmail}</span>
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 bg-white text-slate-600 border border-slate-200 rounded text-[11px] font-medium">
+                  <span className="px-2 py-0.5 bg-white text-slate-600 border border-slate-200 rounded text-xs font-medium">
                     Trưởng nhóm
                   </span>
                 </div>
 
                 {/* Members list */}
                 <div className="space-y-2">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Thành viên nhóm ({group.members.length})
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -424,14 +429,14 @@ export const MatchmakingView: React.FC = () => {
                         key={idx}
                         className="p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-2 text-xs"
                       >
-                        <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[10px]">
+                        <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs">
                           {member.avatar}
                         </div>
                         <div className="truncate">
                           <span className="font-medium text-slate-800 truncate block">
                             {member.name}
                           </span>
-                          <span className="text-[10px] text-slate-400 truncate block">
+                          <span className="text-xs text-slate-500 truncate block">
                             {member.role}
                           </span>
                         </div>
@@ -448,7 +453,7 @@ export const MatchmakingView: React.FC = () => {
                       {group.missingSkills.map((skill, sIdx) => (
                         <span
                           key={sIdx}
-                          className="px-2 py-0.5 rounded-full bg-white text-amber-700 border border-amber-300 text-[11px] font-semibold"
+                          className="px-2 py-0.5 rounded-full bg-white text-amber-700 border border-amber-300 text-xs font-semibold"
                         >
                           + {skill}
                         </span>
@@ -498,10 +503,12 @@ export const MatchmakingView: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 mb-2">
-              Ghép nhóm thông minh
+              {!hasGroup ? "Tìm nhóm" : currentUser?.isGroupLeader ? "Quản lý nhóm" : "Nhóm của tôi"}
             </h1>
             <p className="text-sm text-slate-600">
-              Khảo sát lịch rảnh và gợi ý nhóm phù hợp
+              {hasGroup
+                ? "Thông tin nhóm, lịch rảnh và các nhóm trong lớp"
+                : "Khai báo lịch rảnh, kỹ năng và tìm nhóm phù hợp"}
             </p>
           </div>
 
@@ -600,7 +607,7 @@ export const MatchmakingView: React.FC = () => {
                       {currentUser?.teamName || "Nhóm"}
                     </h3>
                     <span className="text-sm text-slate-600">
-                      {groupMembers.length > 0 ? groupMembers.length : 1}/4 thành viên
+                      {groupMembers.length || classGroups.find((g) => g.id === currentUser?.teamId)?.memberCount || 0}/4 thành viên
                     </span>
                   </div>
                 </div>
@@ -620,7 +627,7 @@ export const MatchmakingView: React.FC = () => {
                     onClick={() => setCurrentScreen("kanban")}
                     className="flex-1 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
                   >
-                    <span>Vào Bảng công việc</span>
+                    <span>Vào Bảng tiến độ</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
 
@@ -687,7 +694,7 @@ export const MatchmakingView: React.FC = () => {
                     onChange={(e) => setUserNote(e.target.value)}
                     rows={2}
                     className="w-full text-sm p-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
-                    placeholder="Nhập lời nhắn tự giới thiệu bản thân..."
+                    placeholder="Ví dụ: Em có kinh nghiệm React và Figma, mong muốn cùng nhóm làm đồ án..."
                   />
                 </div>
 
@@ -695,7 +702,7 @@ export const MatchmakingView: React.FC = () => {
                 <div className="space-y-2.5 mb-5">
                   <button
                     onClick={handleFindGroup}
-                    className="w-full py-3 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-md shadow-indigo-600/20"
+                    className="w-full py-3 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer shadow-md shadow-blue-600/20"
                   >
                     <Search className="w-5 h-5" />
                     <span>Tìm nhóm phù hợp theo lịch rảnh</span>
@@ -762,7 +769,11 @@ export const MatchmakingView: React.FC = () => {
                             ) : (
                               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 text-xs font-semibold">
                                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                                <span>Trùng {slots} buổi rảnh</span>
+                                <span>
+                                  {slots === 0
+                                    ? "Nhóm chưa khai lịch rảnh"
+                                    : `Trùng ${slots} buổi rảnh`}
+                                </span>
                               </div>
                             )}
 
@@ -874,7 +885,7 @@ export const MatchmakingView: React.FC = () => {
 
           {/* Search Input */}
           <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={studentGroupSearch}
@@ -940,7 +951,7 @@ export const MatchmakingView: React.FC = () => {
                               {group.name}
                             </h3>
                             {isMyGroup && (
-                              <span className="px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold text-[10px]">
+                              <span className="px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold text-xs">
                                 Nhóm của bạn
                               </span>
                             )}
@@ -952,20 +963,20 @@ export const MatchmakingView: React.FC = () => {
                         </div>
 
                         <span
-                          className={`text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                          className={`text-xs font-bold px-2 py-0.5 rounded-full border shrink-0 ${
                             isFull
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                               : "bg-amber-50 text-amber-700 border-amber-200"
                           }`}
                         >
-                          {group.memberCount}/{group.maxMembers} SV
+                          {group.memberCount}/{group.maxMembers} thành viên
                         </span>
                       </div>
 
                       {/* Leader Card */}
                       <div className="p-2.5 bg-white rounded-xl border border-slate-100 flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-[11px]">
+                          <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-xs">
                             {group.leaderAvatar}
                           </div>
                           <div className="truncate">
@@ -973,7 +984,7 @@ export const MatchmakingView: React.FC = () => {
                               <span className="truncate">{group.leaderName}</span>
                               <Crown className="w-3 h-3 text-amber-500 shrink-0" />
                             </div>
-                            <span className="text-[10px] text-slate-400 truncate block">
+                            <span className="text-xs text-slate-500 truncate block">
                               Trưởng nhóm • {group.leaderEmail || "sv@ued.udn.vn"}
                             </span>
                           </div>
@@ -983,14 +994,14 @@ export const MatchmakingView: React.FC = () => {
                       {/* Members List */}
                       {group.members && group.members.length > 0 && (
                         <div className="space-y-1.5">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
                             Thành viên nhóm ({group.members.length}):
                           </span>
                           <div className="flex flex-wrap gap-1.5">
                             {group.members.map((m, mIdx) => (
                               <span
                                 key={mIdx}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-[11px]"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs"
                               >
                                 <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 text-[9px] font-bold flex items-center justify-center">
                                   {m.avatar || "SV"}
@@ -1005,14 +1016,14 @@ export const MatchmakingView: React.FC = () => {
                       {/* Missing skills needed (if recruiting) */}
                       {!isFull && group.missingSkills && group.missingSkills.length > 0 && (
                         <div className="space-y-1 bg-amber-50/70 p-2 rounded-xl border border-amber-100">
-                          <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
+                          <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block">
                             Vị trí đang tuyển:
                           </span>
                           <div className="flex flex-wrap gap-1">
                             {group.missingSkills.map((sk, idx) => (
                               <span
                                 key={idx}
-                                className="text-[10px] px-2 py-0.5 bg-white border border-amber-200 rounded-md text-amber-700 font-semibold"
+                                className="text-xs px-2 py-0.5 bg-white border border-amber-200 rounded-md text-amber-700 font-semibold"
                               >
                                 + {sk}
                               </span>
@@ -1029,9 +1040,9 @@ export const MatchmakingView: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => setCurrentScreen("kanban")}
-                            className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                            className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
                           >
-                            <span>Bảng công việc nhóm</span>
+                            <span>Bảng tiến độ nhóm</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -1048,7 +1059,7 @@ export const MatchmakingView: React.FC = () => {
                             title={hasGroup ? "Bạn đã thuộc nhóm khác" : "Gửi đơn xin vào nhóm"}
                             className={`w-full py-2 px-2 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer ${
                               hasGroup
-                                ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                                ? "bg-slate-100 text-slate-500 cursor-not-allowed border border-slate-200"
                                 : "bg-blue-600 hover:bg-blue-700 text-white shadow-2xs"
                             }`}
                           >

@@ -142,7 +142,7 @@ export const NotificationDropdown: React.FC = () => {
         <div className="flex items-center gap-2">
           <h3 className="font-bold text-slate-900 text-sm">Thông báo</h3>
           {unreadCount > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[11px] font-bold">
+            <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-xs font-bold">
               {unreadCount} mới
             </span>
           )}
@@ -152,7 +152,7 @@ export const NotificationDropdown: React.FC = () => {
           {unreadCount > 0 && (
             <button
               onClick={markAllNotificationsAsRead}
-              className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 cursor-pointer hover:underline"
+              className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 cursor-pointer hover:underline"
               title="Đánh dấu tất cả đã đọc"
             >
               <CheckCheck className="w-3.5 h-3.5" />
@@ -161,7 +161,7 @@ export const NotificationDropdown: React.FC = () => {
           )}
           <button
             onClick={() => setIsNotificationOpen(false)}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition"
+            className="p-1 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200 transition"
           >
             <X className="w-4 h-4" />
           </button>
@@ -195,8 +195,8 @@ export const NotificationDropdown: React.FC = () => {
       {/* Notification List */}
       <div className="max-h-96 overflow-y-auto divide-y divide-slate-100">
         {displayNotifications.length === 0 ? (
-          <div className="py-12 px-4 text-center text-slate-400 space-y-2">
-            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+          <div className="py-12 px-4 text-center text-slate-500 space-y-2">
+            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-500">
               <BellOff className="w-6 h-6" />
             </div>
             <p className="text-xs">Không có thông báo nào</p>
@@ -236,17 +236,17 @@ export const NotificationDropdown: React.FC = () => {
                       <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0"></span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                  <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                     {notif.message}
                   </p>
                   <div className="flex items-center justify-between mt-1.5">
-                    <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <span className="text-xs text-slate-500 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
                       {notif.createdAt}
                     </span>
 
                     {notif.targetScreen && (
-                      <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition">
+                      <span className="text-xs text-blue-600 font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition">
                         <span>Chi tiết</span>
                         <ArrowRight className="w-3 h-3" />
                       </span>
@@ -260,7 +260,7 @@ export const NotificationDropdown: React.FC = () => {
                     e.stopPropagation();
                     clearNotification(notif.id);
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded transition absolute right-2 top-2"
+                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-600 rounded transition absolute right-2 top-2"
                   title="Xóa thông báo"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -273,7 +273,7 @@ export const NotificationDropdown: React.FC = () => {
 
       {/* Footer */}
       <div className="p-3 bg-slate-50 border-t border-slate-100 text-center">
-        <span className="text-[11px] text-slate-500">
+        <span className="text-xs text-slate-500">
           Hệ thống thông báo thời gian thực • UD-DN ProjectHub
         </span>
       </div>

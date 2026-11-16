@@ -107,7 +107,7 @@ export const DataMigrationPrompt: React.FC = () => {
             <div className="text-sm text-blue-900">
               <p className="font-semibold">Dữ liệu demo bao gồm:</p>
               <ul className="mt-1 space-y-0.5 text-blue-800">
-                <li>• 10 tasks mẫu (Kanban board)</li>
+                <li>• 10 tasks mẫu (bảng tiến độ)</li>
                 <li>• 4 milestones (cột mốc)</li>
                 <li>• Lịch rảnh mẫu</li>
               </ul>
@@ -144,7 +144,7 @@ export const DataMigrationPrompt: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <p className="text-xs text-slate-400 text-center">
+        <p className="text-xs text-slate-500 text-center">
           Bạn có thể xóa và tự tạo dữ liệu mới sau.
         </p>
       </div>

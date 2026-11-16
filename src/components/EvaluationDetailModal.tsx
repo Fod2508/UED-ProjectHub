@@ -28,14 +28,14 @@ export const EvaluationDetailModal: React.FC = () => {
               <h3 className="font-bold text-slate-900 text-base">
                 Phiếu đánh giá chéo: {viewingDetailMember.name}
               </h3>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className="text-xs text-slate-500 font-mono">
                 Mã SV: {viewingDetailMember.studentId}
               </p>
             </div>
           </div>
           <button
             onClick={() => setViewingDetailMember(null)}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition"
+            className="p-1 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200 transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -57,11 +57,11 @@ export const EvaluationDetailModal: React.FC = () => {
           {/* Role and tasks stats */}
           <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
             <div>
-              <span className="text-slate-400 text-xs block">Vai trò đảm nhận:</span>
+              <span className="text-slate-500 text-xs block">Vai trò đảm nhận:</span>
               <strong className="text-slate-800 text-xs">{viewingDetailMember.roleInTeam}</strong>
             </div>
             <div>
-              <span className="text-slate-400 text-xs block">Tỷ lệ hoàn thành task:</span>
+              <span className="text-slate-500 text-xs block">Tỷ lệ hoàn thành task:</span>
               <strong className="text-slate-800 text-xs">
                 {viewingDetailMember.completionRate}% ({viewingDetailMember.completedTasks}/{viewingDetailMember.totalTasks} việc)
               </strong>
@@ -115,7 +115,7 @@ export const EvaluationDetailModal: React.FC = () => {
           </div>
 
           {/* Formula summary */}
-          <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-100 text-[11px] text-blue-800">
+          <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-blue-800">
             <div className="flex items-center gap-1 font-semibold mb-0.5">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Công thức tính điểm đóng góp:</span>

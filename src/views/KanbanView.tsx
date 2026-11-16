@@ -473,16 +473,8 @@ export const KanbanView: React.FC = () => {
 
             <div className="flex items-center gap-3 flex-wrap">
               <button
-                onClick={() => setCurrentScreen("milestones")}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 cursor-pointer"
-              >
-                <Calendar className="w-4 h-4 text-slate-500" />
-                <span>Xem Cột mốc nộp bài</span>
-              </button>
-
-              <button
                 onClick={() => setCurrentScreen("report")}
-                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <FileText className="w-4 h-4" />
                 <span>Báo cáo Đóng góp</span>
@@ -516,7 +508,7 @@ export const KanbanView: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Nhóm đồ án
               </span>
               <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -529,7 +521,7 @@ export const KanbanView: React.FC = () => {
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Đúng tiến độ (≥70%)
               </span>
               <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -542,7 +534,7 @@ export const KanbanView: React.FC = () => {
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Cần đôn đốc (&lt;60%)
               </span>
               <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
@@ -555,7 +547,7 @@ export const KanbanView: React.FC = () => {
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Tiến độ trung bình
               </span>
               <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -616,9 +608,11 @@ export const KanbanView: React.FC = () => {
 
               <div className="space-y-3">
                 {lecturerGroupTasks.length === 0 && (
-                  <p className="py-8 text-center text-sm text-slate-400">
+                  <p className="py-8 text-center text-sm text-slate-500">
                     {lecturerTasksLoading
                       ? "Đang tải công việc..."
+                      : !auth.currentUser
+                      ? "Dữ liệu mẫu chỉ có công việc chi tiết của Nhóm 04."
                       : "Nhóm này chưa có công việc nào."}
                   </p>
                 )}
@@ -661,11 +655,11 @@ export const KanbanView: React.FC = () => {
 
                     <div className="flex items-center gap-4 text-xs text-slate-500 shrink-0">
                       <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <Clock className="w-3.5 h-3.5 text-slate-500" />
                         <span>Hạn: {task.dueDate}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[10px]">
+                        <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs">
                           {task.assigneeAvatar}
                         </div>
                         <span className="font-medium text-slate-700">
@@ -685,7 +679,7 @@ export const KanbanView: React.FC = () => {
             <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-medium w-full sm:w-64">
-                  <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                  <Search className="w-4 h-4 text-slate-500 shrink-0" />
                   <input
                     type="text"
                     value={lecturerSearch}
@@ -850,9 +844,7 @@ export const KanbanView: React.FC = () => {
             Bảng tiến độ công việc chưa được mở khóa
           </h2>
           <p className="text-sm text-slate-600 mb-6 leading-relaxed max-w-lg mx-auto">
-            Theo quy trình <strong>Giai đoạn 2 (Tracking)</strong>, bạn cần phải{" "}
-            <strong>tham gia hoặc tạo một nhóm đồ án</strong> trước khi có thể truy cập
-            Bảng tiến độ công việc và phân chia nhiệm vụ.
+            Bạn cần <strong>tham gia hoặc tạo một nhóm đồ án</strong> để dùng bảng tiến độ.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
@@ -861,13 +853,6 @@ export const KanbanView: React.FC = () => {
             >
               <Users className="w-4 h-4" />
               <span>Tìm nhóm hoặc Tạo nhóm ngay</span>
-            </button>
-            <button
-              onClick={() => setCurrentScreen("milestones")}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-sm transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Calendar className="w-4 h-4" />
-              <span>Xem Cột mốc nộp bài</span>
             </button>
           </div>
         </div>
@@ -919,15 +904,6 @@ export const KanbanView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setCurrentScreen("milestones")}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <Calendar className="w-4 h-4 text-slate-500" />
-              <span>Xem Cột mốc nộp bài</span>
-              <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-            </button>
-
             {/* Chỉ Trưởng nhóm được tạo / giao việc */}
             {isLeader && (
               <button
@@ -956,7 +932,7 @@ export const KanbanView: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100">
           {/* Milestone Filter Dropdown */}
           <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-            <Layers className="w-4 h-4 text-slate-400" />
+            <Layers className="w-4 h-4 text-slate-500" />
             <select
               value={selectedMilestoneId}
               onChange={(e) => setSelectedMilestoneId(e.target.value)}
@@ -1008,7 +984,7 @@ export const KanbanView: React.FC = () => {
 
           {/* Search box */}
           <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs flex-1 max-w-xs">
-            <Search className="w-3.5 h-3.5 text-slate-400" />
+            <Search className="w-3.5 h-3.5 text-slate-500" />
             <input
               type="text"
               value={searchQuery}
@@ -1020,7 +996,7 @@ export const KanbanView: React.FC = () => {
 
           {/* Assignee Filter Avatars */}
           <div className="flex items-center gap-1 ml-auto">
-            <span className="text-xs text-slate-400 mr-1 hidden sm:inline">Lọc theo:</span>
+            <span className="text-xs text-slate-500 mr-1 hidden sm:inline">Lọc theo:</span>
             <button
               onClick={() => setSelectedAssignee(null)}
               className={`px-2 py-1 rounded-lg text-xs font-medium ${
@@ -1055,7 +1031,7 @@ export const KanbanView: React.FC = () => {
       </div>
 
       {/* 2. 6 Cột Bảng tiến độ công việc */}
-      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-flow-col auto-cols-[minmax(15rem,1fr)] gap-4 overflow-x-auto pb-3 snap-x">
         {columns.map((col) => {
           const colTasks = filteredTasks.filter((t) => t.status === col.id);
 
@@ -1064,7 +1040,7 @@ export const KanbanView: React.FC = () => {
               key={col.id}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, col.id)}
-              className="bg-slate-50 rounded-2xl p-4 min-h-[500px]"
+              className="bg-slate-50 rounded-2xl p-4 min-h-[500px] snap-start"
             >
               {/* Column Header */}
               <div className="flex items-center justify-between mb-4 pb-3 border-b">
@@ -1079,7 +1055,7 @@ export const KanbanView: React.FC = () => {
               {/* Task Cards */}
               <div className="space-y-3">
                 {colTasks.length === 0 ? (
-                  <div className="py-12 text-center text-slate-400 text-sm">
+                  <div className="py-12 text-center text-slate-500 text-sm">
                     Chưa có việc
                   </div>
                 ) : (
@@ -1116,14 +1092,14 @@ export const KanbanView: React.FC = () => {
                             {task.tag}
                           </span>
                           {task.milestoneId && (
-                            <span className="text-[11px] font-medium text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
+                            <span className="text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
                               {milestones.find((m) => m.id === task.milestoneId)
                                 ?.name.split(":")[0] || task.milestoneId}
                             </span>
                           )}
                           {task.priority && task.priority !== "Thường" && (
                             <span
-                              className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${
+                              className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
                                 task.priority === "Khẩn cấp"
                                   ? "text-white bg-rose-600"
                                   : "text-rose-700 bg-rose-50 border border-rose-200"
@@ -1148,8 +1124,12 @@ export const KanbanView: React.FC = () => {
                         </h4>
 
                         {/* Người phụ trách */}
-                        <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                          <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <div className="flex items-center gap-2 text-xs text-slate-600">
+                          <div
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold shrink-0 ${avatarColor(task.assigneeName)}`}
+                          >
+                            {task.assigneeAvatar}
+                          </div>
                           <span className="truncate">{task.assigneeName}</span>
                         </div>
 
@@ -1189,7 +1169,7 @@ export const KanbanView: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => openSubmitReview(task)}
-                            className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="w-full py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
                           >
                             <Send className="w-3.5 h-3.5" />
                             <span>Gửi duyệt</span>
@@ -1198,11 +1178,11 @@ export const KanbanView: React.FC = () => {
 
                         {/* Trưởng nhóm duyệt thẻ Chờ duyệt: Đạt / Trả lại */}
                         {isPendingReview && isLeader && (
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="flex flex-wrap gap-2">
                             <button
                               type="button"
                               onClick={() => handleApproveTask(task)}
-                              className="py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
+                              className="flex-1 whitespace-nowrap px-2 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
                             >
                               <Check className="w-3.5 h-3.5" />
                               <span>Đạt</span>
@@ -1210,7 +1190,7 @@ export const KanbanView: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => openReturnTask(task)}
-                              className="py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
+                              className="flex-1 whitespace-nowrap px-2 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
                               <span>Trả lại</span>
@@ -1266,13 +1246,6 @@ export const KanbanView: React.FC = () => {
                               </div>
                             )}
 
-                            {/* Avatar */}
-                            <div
-                              title={task.assigneeName}
-                              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs text-white font-bold ${avatarColor(task.assigneeName)}`}
-                            >
-                              {task.assigneeAvatar}
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -1364,7 +1337,7 @@ export const KanbanView: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5"
               >
                 <Send className="w-4 h-4" />
                 <span>Xác nhận gửi duyệt</span>

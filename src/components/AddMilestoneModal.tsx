@@ -31,7 +31,7 @@ export const AddMilestoneModal: React.FC = () => {
     if (isLeaderInternal) {
       addMilestone({
         name: name.trim(),
-        phase: phase.trim() || "Kế hoạch Sprint nội bộ nhóm",
+        phase: phase.trim() || "Kế hoạch cột mốc nội bộ nhóm",
         deliverables:
           deliverables.trim() || "Hoàn thành code & kiểm thử nội bộ",
         dueDate,
@@ -93,7 +93,7 @@ export const AddMilestoneModal: React.FC = () => {
           </div>
           <button
             onClick={() => setIsAddMilestoneModalOpen(false)}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition"
+            className="p-1 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200 transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -123,7 +123,7 @@ export const AddMilestoneModal: React.FC = () => {
               onChange={(e) => setName(e.target.value)}
               placeholder={
                 isLeaderInternal
-                  ? "Ví dụ: Sprint 2.1: Hoàn thành thiết kế DB & API auth"
+                  ? "Ví dụ: Mốc nội bộ 2.1: Hoàn thành thiết kế DB & API auth"
                   : "Ví dụ: Cột mốc 5: Hoàn thiện hồ sơ nghiệm thu"
               }
               className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
@@ -209,7 +209,7 @@ export const AddMilestoneModal: React.FC = () => {
               type="submit"
               className={`px-5 py-2 rounded-xl text-xs font-semibold text-white transition shadow-sm ${
                 isLeaderInternal
-                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  ? "bg-blue-600 hover:bg-blue-700"
                   : "bg-blue-600 hover:bg-blue-700"
               }`}
             >

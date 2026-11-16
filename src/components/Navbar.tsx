@@ -32,30 +32,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
   const isLeader = currentUser?.isGroupLeader ?? false;
   const isLecturer = currentRole === "lecturer";
 
-  const screenTitles: Record<string, string> = {
-    landing: "Trang chủ Hệ thống",
-    dashboard: isLecturer
-      ? "Tổng quan Đồ án Môn học (Giảng viên)"
-      : "Tổng quan Đồ án Nhóm (Sinh viên)",
-    matchmaking: isLecturer
-      ? "Quản lý Danh mục Nhóm & Đề tài (SCR_01)"
-      : isLeader
-      ? "Quản lý Nhóm & Duyệt thành viên (SCR_01)"
-      : "Tìm nhóm & Ghép đôi thông minh (SCR_01)",
-    kanban: isLecturer
-      ? "Tiến độ công việc các Nhóm (SCR_03)"
-      : "Bảng tiến độ công việc (SCR_03)",
-    milestones: isLecturer
-      ? "Cấu hình Đề cương & Cột mốc nộp bài (SCR_04)"
-      : "Lịch nộp bài học phần & Sprint nội bộ (SCR_04)",
-    peer_review: isLecturer
-      ? "Bảng Quản lý Phiên Đánh giá chéo (SCR_05)"
-      : "Đánh giá chéo Thành viên Cột mốc 2 (SCR_05)",
-    report: isLecturer
-      ? "Báo cáo Đóng góp & Thẩm định Cảnh báo (SCR_06)"
-      : "Điểm đóng góp cá nhân & Minh bạch ẩn danh (SCR_06)",
-  };
-
   return (
     <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between">
       {/* Left: Mobile hamburger & Breadcrumbs */}
@@ -69,18 +45,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
         </button>
 
         <div className="hidden sm:flex items-center gap-2 text-xs">
-          <span className="font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md">
-            Khoa CNTT • ĐH Sư phạm
-          </span>
-          <span className="text-slate-300">/</span>
           <div className="flex items-center gap-1 text-slate-500">
             <Calendar className="w-3.5 h-3.5" />
             <span>Học kỳ 1 (2026 - 2027)</span>
           </div>
-          <span className="text-slate-300">/</span>
-          <span className="font-semibold text-slate-900 truncate max-w-xs md:max-w-md">
-            {screenTitles[currentScreen] || "ProjectHub"}
-          </span>
         </div>
       </div>
 
@@ -129,7 +97,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
             >
               <Bell className="w-4 h-4" />
               {unreadNotificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white animate-pulse">
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-xs font-bold flex items-center justify-center ring-2 ring-white animate-pulse">
                   {unreadNotificationCount > 9 ? "9+" : unreadNotificationCount}
                 </span>
               )}
@@ -159,13 +127,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
           <div className="hidden lg:flex flex-col text-left">
             <span className="text-xs font-bold text-slate-900 leading-tight">
               {currentUser?.name ||
-                (currentRole === "student" ? "Nguyễn Văn A (Demo)" : "TS. Trần Văn B (Demo)")}
+                (currentRole === "student" ? "Sinh viên" : "Giảng viên")}
             </span>
-            <span className="text-[10px] text-slate-400 leading-tight">
-              {currentUser?.title ||
-                (currentUser
-                  ? (currentRole === "student" ? "Sinh viên" : "Giảng viên")
-                  : (currentRole === "student" ? "Chế độ Demo" : "Chế độ Demo"))}
+            <span className="text-xs text-slate-500 leading-tight">
+              {currentUser?.title || (currentRole === "student" ? "Sinh viên" : "Giảng viên")}
             </span>
           </div>
 

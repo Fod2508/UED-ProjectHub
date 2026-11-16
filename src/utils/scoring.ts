@@ -118,7 +118,7 @@ export function validateMilestonesWeight(
 }
 
 /**
- * Giai đoạn 3 - Đánh giá chéo & Chống Free-rider:
+ * Giai đoạn 3 - Đánh giá chéo & Chống thành viên đóng góp thấp:
  * Thuật toán tính điểm:
  * Điểm đóng góp = (Tỷ lệ hoàn thành công việc * 0.5) + (Điểm đánh giá chéo TB / 5 * 100 * 0.5)
  * completionRate: 0 - 100 (%)

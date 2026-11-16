@@ -70,7 +70,7 @@ export const ReviewApplicantsModal: React.FC = () => {
           </div>
           <button
             onClick={() => setIsApplicantModalOpen(false)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-100 transition"
             aria-label="Đóng cửa sổ"
           >
             <X className="w-5 h-5" />
@@ -88,7 +88,7 @@ export const ReviewApplicantsModal: React.FC = () => {
             }`}
           >
             <span>Chờ duyệt</span>
-            <span className="px-2 py-0.5 rounded-full text-[11px] bg-blue-100 text-blue-700">
+            <span className="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700">
               {pendingList.length}
             </span>
           </button>
@@ -101,7 +101,7 @@ export const ReviewApplicantsModal: React.FC = () => {
             }`}
           >
             <span>Đã chấp nhận</span>
-            <span className="px-2 py-0.5 rounded-full text-[11px] bg-emerald-100 text-emerald-700">
+            <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700">
               {acceptedList.length}
             </span>
           </button>
@@ -114,7 +114,7 @@ export const ReviewApplicantsModal: React.FC = () => {
             }`}
           >
             <span>Đã từ chối</span>
-            <span className="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">
+            <span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
               {rejectedList.length}
             </span>
           </button>
@@ -123,7 +123,7 @@ export const ReviewApplicantsModal: React.FC = () => {
         {/* Content list */}
         <div className="p-6 overflow-y-auto space-y-5 flex-1">
           {currentList.length === 0 ? (
-            <div className="py-12 text-center text-slate-400">
+            <div className="py-12 text-center text-slate-500">
               <UserCheck className="w-12 h-12 mx-auto mb-2 text-slate-300" />
               <p className="text-sm">Không có hồ sơ nào trong mục này.</p>
             </div>
@@ -138,7 +138,7 @@ export const ReviewApplicantsModal: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200/80">
                       <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Khuyên chọn hàng đầu • Bù trừ kỹ năng tối ưu</span>
+                      <span>Khuyên chọn</span>
                     </span>
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
                       <Check className="w-3 h-3 text-emerald-600" />
@@ -162,7 +162,7 @@ export const ReviewApplicantsModal: React.FC = () => {
                           {app.className}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 font-mono mt-0.5">
+                      <p className="text-xs text-slate-500 font-mono mt-0.5">
                         Mã SV: {app.studentId}
                       </p>
                     </div>
@@ -202,7 +202,7 @@ export const ReviewApplicantsModal: React.FC = () => {
 
                 {/* Candidate Message */}
                 <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-100 text-xs text-slate-600 italic">
-                  <span className="not-italic font-bold text-[10px] text-slate-400 block mb-1 uppercase tracking-wider">
+                  <span className="not-italic font-bold text-xs text-slate-500 block mb-1 uppercase tracking-wider">
                     Lời nhắn từ ứng viên:
                   </span>
                   &ldquo;{app.note}&rdquo;
@@ -264,7 +264,7 @@ export const ReviewApplicantsModal: React.FC = () => {
                   )}
 
                   {app.status === "rejected" && (
-                    <span className="text-xs text-slate-400 font-medium">
+                    <span className="text-xs text-slate-500 font-medium">
                       Đã từ chối hồ sơ
                     </span>
                   )}

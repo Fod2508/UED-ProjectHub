@@ -57,7 +57,7 @@ export const GroupMembersCard: React.FC<GroupMembersCardProps> = ({
       {/* Members List */}
       <div className="space-y-3">
         {members.length === 0 ? (
-          <div className="py-8 text-center text-slate-400">
+          <div className="py-8 text-center text-slate-500">
             <Users className="w-12 h-12 mx-auto mb-2 text-slate-300" />
             <p className="text-sm">Chưa có thành viên nào</p>
           </div>
@@ -90,7 +90,7 @@ export const GroupMembersCard: React.FC<GroupMembersCardProps> = ({
                       {member.name}
                     </h4>
                     {member.isLeader && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-semibold shrink-0">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-600 text-white text-xs font-semibold shrink-0">
                         <Crown className="w-3 h-3" />
                         <span>Trưởng nhóm</span>
                       </span>
@@ -114,13 +114,13 @@ export const GroupMembersCard: React.FC<GroupMembersCardProps> = ({
                       {member.skills.slice(0, 3).map((skill, idx) => (
                         <span
                           key={idx}
-                          className="text-[10px] font-medium px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700"
+                          className="text-xs font-medium px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700"
                         >
                           {skill}
                         </span>
                       ))}
                       {member.skills.length > 3 && (
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-500">
+                        <span className="text-xs font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-500">
                           +{member.skills.length - 3}
                         </span>
                       )}

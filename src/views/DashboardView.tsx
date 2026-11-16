@@ -134,7 +134,7 @@ export const DashboardView: React.FC = () => {
             <div className="text-3xl font-bold text-slate-900 mb-1">
               {completedTasks}/{tasks.length}
             </div>
-            <p className="text-sm text-slate-600">Tasks hoàn thành</p>
+            <p className="text-sm text-slate-600">Công việc hoàn thành</p>
           </div>
 
           <div
@@ -159,87 +159,6 @@ export const DashboardView: React.FC = () => {
               {warningMembers.length}
             </div>
             <p className="text-sm text-slate-600">Cảnh báo</p>
-          </div>
-        </div>
-
-        {/* 3. Workflow Phases */}
-        <div className="space-y-5">
-          <h2 className="text-xl font-bold text-slate-900">Quy trình</h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Phase 1 */}
-            <div className="bg-white p-6 rounded-2xl hover:shadow-lg transition">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xl mb-4">
-                1
-              </div>
-              <h3 className="text-base font-bold text-slate-900 mb-2">
-                Ghép nhóm
-              </h3>
-              <p className="text-sm text-slate-600 mb-4">
-                Khảo sát lịch rảnh và danh sách nhóm môn học
-              </p>
-              <button
-                onClick={() => setCurrentScreen("matchmaking")}
-                className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
-              >
-                <span>Xem chi tiết</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Phase 2 */}
-            <div className="bg-white p-6 rounded-2xl hover:shadow-lg transition">
-              <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xl mb-4">
-                2
-              </div>
-              <h3 className="text-base font-bold text-slate-900 mb-2">Tiến độ</h3>
-              <p className="text-sm text-slate-600 mb-4">
-                Tiến độ công việc và quản lý cột mốc
-              </p>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setCurrentScreen("kanban")}
-                  className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
-                >
-                  Bảng tiến độ
-                </button>
-                <span className="text-slate-300">•</span>
-                <button
-                  onClick={() => setCurrentScreen("milestones")}
-                  className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
-                >
-                  Cột mốc
-                </button>
-              </div>
-            </div>
-
-            {/* Phase 3 */}
-            <div className="bg-white p-6 rounded-2xl hover:shadow-lg transition">
-              <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xl mb-4">
-                3
-              </div>
-              <h3 className="text-base font-bold text-slate-900 mb-2">
-                Đánh giá
-              </h3>
-              <p className="text-sm text-slate-600 mb-4">
-                Đánh giá chéo minh bạch &amp; công bằng
-              </p>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setCurrentScreen("peer_review")}
-                  className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
-                >
-                  Đánh giá
-                </button>
-                <span className="text-slate-300">•</span>
-                <button
-                  onClick={() => setCurrentScreen("report")}
-                  className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
-                >
-                  Báo cáo
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -419,7 +338,7 @@ export const DashboardView: React.FC = () => {
           >
             <Users className="w-8 h-8 text-blue-600 mb-3" />
             <div className="text-3xl font-bold text-slate-900 mb-1">
-              {groupMembers.length}/{4}
+              {groupMembers.length || classGroups.find((g) => g.id === currentUser?.teamId)?.memberCount || 0}/{4}
             </div>
             <p className="text-sm text-slate-600">Thành viên</p>
           </div>
@@ -433,7 +352,7 @@ export const DashboardView: React.FC = () => {
             <div className="text-3xl font-bold text-slate-900 mb-1">
               {completedTasks}/{tasks.length}
             </div>
-            <p className="text-sm text-slate-600">Tasks hoàn thành</p>
+            <p className="text-sm text-slate-600">Công việc hoàn thành</p>
           </div>
 
           {/* KPI 3 */}
@@ -463,87 +382,6 @@ export const DashboardView: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* 3. Workflow Phases - Simplified */}
-      <div className="space-y-5">
-        <h2 className="text-xl font-bold text-slate-900">Quy trình</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Phase 1 */}
-          <div className="bg-white p-6 rounded-2xl hover:shadow-lg transition">
-            <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xl mb-4">
-              1
-            </div>
-            <h3 className="text-base font-bold text-slate-900 mb-2">
-              Ghép nhóm
-            </h3>
-            <p className="text-sm text-slate-600 mb-4">
-              Khảo sát lịch rảnh và ghép nhóm thông minh
-            </p>
-            <button
-              onClick={() => setCurrentScreen("matchmaking")}
-              className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
-            >
-              <span>Xem chi tiết</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Phase 2 */}
-          <div className="bg-white p-6 rounded-2xl hover:shadow-lg transition">
-            <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xl mb-4">
-              2
-            </div>
-            <h3 className="text-base font-bold text-slate-900 mb-2">Tiến độ</h3>
-            <p className="text-sm text-slate-600 mb-4">
-              Tiến độ công việc và quản lý cột mốc
-            </p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setCurrentScreen("kanban")}
-                className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
-              >
-                Bảng tiến độ
-              </button>
-              <span className="text-slate-300">•</span>
-              <button
-                onClick={() => setCurrentScreen("milestones")}
-                className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
-              >
-                Cột mốc
-              </button>
-            </div>
-          </div>
-
-          {/* Phase 3 */}
-          <div className="bg-white p-6 rounded-2xl hover:shadow-lg transition">
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xl mb-4">
-              3
-            </div>
-            <h3 className="text-base font-bold text-slate-900 mb-2">
-              Đánh giá
-            </h3>
-            <p className="text-sm text-slate-600 mb-4">
-              Đánh giá chéo minh bạch &amp; công bằng
-            </p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setCurrentScreen("peer_review")}
-                className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
-              >
-                Đánh giá
-              </button>
-              <span className="text-slate-300">•</span>
-              <button
-                onClick={() => setCurrentScreen("report")}
-                className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
-              >
-                Báo cáo
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* 4. Group Members Card - New Component */}
       {currentUser?.teamId && groupMembers.length > 0 && (
@@ -701,7 +539,7 @@ export const DashboardView: React.FC = () => {
                   </span>
                   <div className="flex items-center gap-1.5">
                     {isMyGroup && (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
                         Nhóm của bạn
                       </span>
                     )}
@@ -712,7 +550,7 @@ export const DashboardView: React.FC = () => {
                           : "bg-emerald-100 text-emerald-700"
                       }`}
                     >
-                      {g.memberCount}/{g.maxMembers} TV
+                      {g.memberCount}/{g.maxMembers} thành viên
                     </span>
                   </div>
                 </div>
