@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "../config/firebase";
 import { doc, getDoc, collection } from "firebase/firestore";
@@ -9,6 +9,7 @@ import {
   applicationService,
 } from "../services";
 import { groupService } from "../services/groupService.ts";
+import { userService } from "../services/userService.ts";
 import {
   ScreenType,
   UserRole,
@@ -45,10 +46,23 @@ import {
   validateMilestonesWeight,
   calculateContributionScore,
   getContributionStatus,
-  checkIsTaskOverdue,
+  calculateMatchScore,
+  isTeamRecommended,
+  markOverdueTasks,
 } from "../utils/scoring.ts";
 
 const STORAGE_KEY = "ud_dn_projecthub_state_v2";
+
+// Kết quả so khớp giữa sinh viên và một nhóm đang tuyển
+export interface GroupMatchResult {
+  id: string;
+  name: string;
+  matchScore: number;
+  commonSlotsCount?: number;
+  skillScore?: number;
+  timeScore?: number;
+  matchedSlotLabels?: string[];
+}
 
 interface AppContextType {
   currentScreen: ScreenType;
@@ -66,6 +80,7 @@ interface AppContextType {
   // Schedule matrix
   scheduleMatrix: FreeScheduleMatrix;
   toggleScheduleSlot: (day: string, slot: TimeSlot) => void;
+  saveUserSkills: (skills: string[]) => void;
 
   // Applicants (Giai đoạn 1)
   applicants: CandidateApplicant[];
@@ -74,7 +89,8 @@ interface AppContextType {
   sendJoinRequest: (
     skills: string[],
     note: string,
-    targetGroupId?: string,
+    targetGroupId: string,
+    match?: GroupMatchResult,
   ) => void;
   isApplicantModalOpen: boolean;
   setIsApplicantModalOpen: (open: boolean) => void;
@@ -95,6 +111,11 @@ interface AppContextType {
   submitMilestoneProgress: (
     submission: Omit<MilestoneSubmission, "id" | "submittedAt" | "status">,
   ) => Promise<boolean>;
+  reviewMilestoneSubmission: (
+    submissionId: string,
+    status: "Đạt yêu cầu" | "Cần bổ sung",
+    feedback: string,
+  ) => void;
   allowInternalMilestone: boolean;
   setAllowInternalMilestone: (val: boolean) => void;
   isAddMilestoneModalOpen: boolean;
@@ -151,7 +172,7 @@ interface AppContextType {
   findMatchingGroups: (
     userSkills: string[],
     userSchedule: FreeScheduleMatrix,
-  ) => Promise<Array<{ id: string; name: string; matchScore: number; commonSlotsCount?: number }>>;
+  ) => Promise<GroupMatchResult[]>;
   createNewGroup: (
     userSkills: string[],
     userSchedule: FreeScheduleMatrix,
@@ -234,7 +255,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
               teamId: userData.teamId,
               teamName: userData.teamName,
               isGroupLeader: userData.isGroupLeader || false,
+              skills: Array.isArray(userData.skills) ? userData.skills : [],
             });
+
+            // Lịch rảnh đã lưu trong hồ sơ (UC02)
+            if (userData.scheduleMatrix) {
+              setScheduleMatrix(userData.scheduleMatrix);
+            }
 
             setCurrentRole(userData.role || "student");
           } else {
@@ -387,6 +414,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     const unsubscribe = peerReviewService.subscribeToGroupPeerReviews(
       currentUser.teamId,
       milestoneId,
+      // Sinh viên chỉ tải các phiếu do chính mình chấm (ẩn danh người chấm với thành viên khác)
+      currentUser.id,
       (updatedReviews) => {
         console.log("⭐ Peer reviews updated:", updatedReviews.length);
         setPeerReviews(updatedReviews);
@@ -617,20 +646,76 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [scheduleMatrix, groupReport]);
 
   // Auto-move overdue tasks to 'Quá hạn' status (kịch bản 2.3)
+  // Chạy lại mỗi khi danh sách công việc đổi (kể cả khi Firestore đồng bộ về).
+  // markOverdueTasks trả về đúng mảng cũ khi không có gì đổi nên không lặp vô hạn.
   useEffect(() => {
-    setTasks((prev) => {
-      let changed = false;
-      const updated = prev.map((t) => {
-        if (t.status === "Hoàn thành" || t.status === "Quá hạn") return t;
-        if (checkIsTaskOverdue(t.dueDate, t.status)) {
-          changed = true;
-          return { ...t, status: "Quá hạn" as TaskStatus };
+    setTasks((prev) => markOverdueTasks(prev) as KanbanTask[]);
+  }, [tasks]);
+
+  // Thông báo gửi duyệt / nghiệm thu / giao việc (mục 3.2.3, 3.2.4 của báo cáo).
+  // Công việc đồng bộ thời gian thực qua Firestore, nên so sánh danh sách mới với
+  // danh sách trước đó là biết người khác vừa làm gì — thông báo tới được đúng
+  // người nhận dù hành động xảy ra trên máy khác.
+  const prevTasksRef = useRef<KanbanTask[]>([]);
+  useEffect(() => {
+    const prev = prevTasksRef.current;
+    prevTasksRef.current = tasks;
+    // Lần tải đầu (hoặc vừa đổi nhóm): không coi là thay đổi
+    if (prev.length === 0 || !currentUser) return;
+
+    const myName = currentUser.name;
+    const isLeader = Boolean(currentUser.isGroupLeader);
+
+    tasks.forEach((task) => {
+      const before = prev.find((t) => t.id === task.id);
+      const isMine = task.assigneeName === myName;
+
+      // Việc mới được giao cho mình
+      if ((!before || before.assigneeName !== myName) && isMine && !isLeader) {
+        addNotification({
+          title: "Bạn được giao công việc mới",
+          message: `Công việc '${task.title}' (${task.code}) đã được giao cho bạn. Hạn hoàn thành: ${task.dueDate}`,
+          type: "task_assigned",
+          targetScreen: "kanban",
+          recipientRole: "student",
+        });
+        return;
+      }
+      if (!before || before.status === task.status) return;
+
+      // Thành viên gửi duyệt -> báo Trưởng nhóm
+      if (task.status === "Chờ duyệt" && isLeader && !isMine) {
+        addNotification({
+          title: "Có công việc chờ nghiệm thu",
+          message: `${task.assigneeName} đã gửi duyệt công việc '${task.title}' (${task.code}).`,
+          type: "task_assigned",
+          targetScreen: "kanban",
+          recipientRole: "student",
+        });
+      }
+
+      // Kết quả nghiệm thu -> báo người phụ trách
+      if (before.status === "Chờ duyệt" && isMine && !isLeader) {
+        if (task.status === "Hoàn thành") {
+          addNotification({
+            title: "Công việc đã được nghiệm thu: Đạt",
+            message: `Trưởng nhóm đã duyệt công việc '${task.title}' (${task.code}) sang Hoàn thành.`,
+            type: "task_assigned",
+            targetScreen: "kanban",
+            recipientRole: "student",
+          });
+        } else if (task.status === "Đang thực hiện") {
+          addNotification({
+            title: "Công việc bị trả lại",
+            message: `Trưởng nhóm trả lại công việc '${task.title}' (${task.code}).${task.returnReason ? ` Lý do: ${task.returnReason}` : ""}`,
+            type: "task_assigned",
+            targetScreen: "kanban",
+            recipientRole: "student",
+          });
         }
-        return t;
-      });
-      return changed ? updated : prev;
+      }
     });
-  }, []);
+  }, [tasks]);
 
   const switchDemoPersona = (persona: DemoPersona) => {
     setDemoPersona(persona);
@@ -728,17 +813,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Schedule slot toggle
   const toggleScheduleSlot = (day: string, slot: TimeSlot) => {
-    setScheduleMatrix((prev) => {
-      const daySlots = prev[day] || {};
-      const currentVal = !!daySlots[slot];
-      return {
-        ...prev,
-        [day]: {
-          ...daySlots,
-          [slot]: !currentVal,
-        },
-      };
-    });
+    const daySlots = scheduleMatrix[day] || {};
+    const next: FreeScheduleMatrix = {
+      ...scheduleMatrix,
+      [day]: { ...daySlots, [slot]: !daySlots[slot] },
+    };
+    setScheduleMatrix(next);
+
+    // Lưu lịch rảnh vào hồ sơ người dùng trên Firestore (UC02)
+    if (auth.currentUser) {
+      userService
+        .updateScheduleMatrix(auth.currentUser.uid, next)
+        .catch((error) => console.warn("Could not save schedule:", error));
+    }
+  };
+
+  // Lưu hồ sơ kỹ năng vào hồ sơ người dùng trên Firestore (UC01)
+  const saveUserSkills = (skills: string[]) => {
+    setCurrentUser((prev) => (prev ? { ...prev, skills } : prev));
+    if (auth.currentUser) {
+      userService
+        .updateUserSkills(auth.currentUser.uid, skills)
+        .catch((error) => console.warn("Could not save skills:", error));
+    }
   };
 
   // Team member count state
@@ -840,7 +937,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const sendJoinRequest = async (
     skills: string[],
     note: string,
-    targetGroupId: string = "nhom_04",
+    targetGroupId: string,
+    match?: GroupMatchResult,
   ) => {
     if (!currentUser) {
       showToast("Bạn cần đăng nhập để gửi yêu cầu tham gia nhóm.", "warning");
@@ -853,14 +951,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         studentId: currentUser.code,
         className: currentUser.className || "21CNTT1",
         avatarText: currentUser.avatarText,
-        skills: skills.length ? skills : ["Frontend (React)", "Figma UI/UX"],
-        matchedSessionsCount: 4,
-        matchedSessionsDetails: "T3 Sáng, T5 Sáng, T2 Tối, T5 Tối",
+        skills,
+        // Điểm phù hợp thật của sinh viên với nhóm (tính theo mục 4.2.1 của báo cáo)
+        matchedSessionsCount: match?.commonSlotsCount ?? 0,
+        matchedSessionsDetails: match?.matchedSlotLabels?.length
+          ? match.matchedSlotLabels.join(", ")
+          : "Không có buổi rảnh trùng",
         note: note || "Em xin phép gửi yêu cầu tham gia nhóm đồ án.",
-        skillScore: 92,
-        timeScore: 85,
-        matchScore: 89,
-        isTopRecommendation: true,
+        skillScore: match?.skillScore ?? 0,
+        timeScore: match?.timeScore ?? 0,
+        matchScore: match?.matchScore ?? 0,
+        isTopRecommendation: isTeamRecommended(match?.matchScore ?? 0),
         appliedAt: new Date().toISOString(),
       };
 
@@ -891,7 +992,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const findMatchingGroups = async (
     userSkills: string[],
     userSchedule: FreeScheduleMatrix,
-  ): Promise<Array<{ id: string; name: string; matchScore: number; commonSlotsCount?: number }>> => {
+  ): Promise<GroupMatchResult[]> => {
     if (!currentUser) {
       showToast("Bạn cần đăng nhập để tìm nhóm.", "warning");
       return [];
@@ -911,6 +1012,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           name: g.name,
           matchScore: g.matchScore,
           commonSlotsCount: g.commonSlotsCount,
+          skillScore: g.skillScore,
+          timeScore: g.scheduleScore,
+          matchedSlotLabels: g.matchedSlotLabels,
         }));
       }
 
@@ -944,20 +1048,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
         // 2. Tính số buổi rảnh trùng khớp
         const groupSchedule = (g as any).schedule || {};
-        const { score: scheduleScore, matchedSlots } =
+        const { score: scheduleScore, matchedSlots, matchedSlotLabels } =
           groupService.calculateScheduleMatch(userSchedule, groupSchedule);
 
-        let finalScore = Math.round(skillScore * 0.4 + scheduleScore * 0.6);
-        // Nếu không có bất kỳ buổi nào trùng nhau, điểm thấp (tối đa 25%)
-        if (matchedSlots === 0 && Object.keys(groupSchedule).length > 0) {
-          finalScore = Math.min(25, Math.round(skillScore * 0.25));
-        }
+        // Điểm phù hợp = Kỹ năng × 40% + Lịch rảnh × 60% (không trùng buổi nào: tối đa 28%)
+        const finalScore = calculateMatchScore(
+          skillScore,
+          scheduleScore,
+          matchedSlots,
+        );
 
         return {
           id: g.id,
           name: `${g.name} - ${g.topic}`,
           matchScore: finalScore,
           commonSlotsCount: matchedSlots,
+          skillScore,
+          timeScore: scheduleScore,
+          matchedSlotLabels,
         };
       });
 
@@ -1264,6 +1372,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     });
 
     return true;
+  };
+
+  // Giảng viên kiểm duyệt bài nộp cột mốc (UC23): Đạt yêu cầu / Cần bổ sung kèm nhận xét
+  const reviewMilestoneSubmission = (
+    submissionId: string,
+    status: "Đạt yêu cầu" | "Cần bổ sung",
+    feedback: string,
+  ) => {
+    if (currentRole !== "lecturer") {
+      showToast("Chỉ Giảng viên mới được kiểm duyệt bài nộp.", "warning");
+      return;
+    }
+    const target = milestoneSubmissions.find((s) => s.id === submissionId);
+    if (!target) return;
+
+    const updated = milestoneSubmissions.map((s) =>
+      s.id === submissionId
+        ? { ...s, status, lecturerFeedback: feedback.trim() }
+        : s,
+    );
+    setMilestoneSubmissions(updated);
+    try {
+      localStorage.setItem(
+        STORAGE_KEY + "_milestone_submissions",
+        JSON.stringify(updated),
+      );
+    } catch (e) {
+      console.warn("Could not save submissions", e);
+    }
+
+    showToast(`Đã đánh giá bài nộp của ${target.groupName}: ${status}.`, "success");
+    addNotification({
+      title: `Kết quả kiểm duyệt bài nộp: ${status}`,
+      message: `Giảng viên đã đánh giá bài nộp "${target.title}" (${target.milestoneName}) của ${target.groupName}: ${status}.${feedback.trim() ? ` Nhận xét: ${feedback.trim()}` : ""}`,
+      type: "milestone_published",
+      targetScreen: "milestones",
+      recipientRole: "student",
+    });
   };
 
   // Move tasks on Kanban
@@ -1683,6 +1829,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         logout,
         classGroups,
         scheduleMatrix,
+        saveUserSkills,
         toggleScheduleSlot,
         applicants,
         acceptApplicant,
@@ -1706,6 +1853,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         milestones,
         milestoneSubmissions,
         submitMilestoneProgress,
+        reviewMilestoneSubmission,
         allowInternalMilestone,
         setAllowInternalMilestone,
         isAddMilestoneModalOpen,

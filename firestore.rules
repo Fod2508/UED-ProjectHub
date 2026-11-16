@@ -60,14 +60,27 @@ service cloud.firestore {
         isLecturer()
       );
       
-      // Create: Any authenticated user (will be validated by groupId)
+      // Create: Only the group leader creates and assigns tasks (UC15, UC16)
       allow create: if isAuthenticated() && 
-                       isSameTeam(request.resource.data.groupId);
+                       isSameTeam(request.resource.data.groupId) &&
+                       isGroupLeader();
       
-      // Update: Team members + lecturers
+      // Update:
+      // - Lecturers and the group leader: any change
+      // - A member: only the task assigned to them, never a task that is
+      //   "Chờ duyệt" or "Hoàn thành", never into "Hoàn thành" or "Quá hạn",
+      //   and only the progress fields (UC18)
       allow update: if isAuthenticated() && (
-        isSameTeam(resource.data.groupId) || 
-        isLecturer()
+        isLecturer() ||
+        (isSameTeam(resource.data.groupId) && isGroupLeader()) ||
+        (
+          isSameTeam(resource.data.groupId) &&
+          resource.data.assigneeName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.name &&
+          !(resource.data.status in ['Chờ duyệt', 'Hoàn thành']) &&
+          !(request.resource.data.status in ['Hoàn thành', 'Quá hạn']) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'evidenceLink', 'returnReason', 'overdueResumed', 'updatedAt'])
+        )
       );
       
       // Delete: Group leaders + lecturers only
@@ -123,9 +136,11 @@ service cloud.firestore {
     // ============================================
     
     match /peerReviews/{reviewId} {
-      // Read: Team members (anonymized view) + lecturers (full view)
+      // Read: only the reviewer themselves + lecturers.
+      // The document holds reviewerId, so other team members must not read it
+      // (anonymous peer review, UC25).
       allow read: if isAuthenticated() && (
-        isSameTeam(resource.data.groupId) ||
+        isOwner(resource.data.reviewerId) ||
         isLecturer()
       );
       

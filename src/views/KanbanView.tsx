@@ -32,6 +32,7 @@ export const KanbanView: React.FC = () => {
   const {
     tasks,
     moveTask,
+    updateTask,
     setIsNewTaskModalOpen,
     showToast,
     currentRole,
@@ -53,11 +54,30 @@ export const KanbanView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null);
 
+  // Gửi duyệt (người được giao) & Trả lại (Trưởng nhóm)
+  const [submitReviewTask, setSubmitReviewTask] = useState<KanbanTask | null>(null);
+  const [evidenceInput, setEvidenceInput] = useState("");
+  const [returnTask, setReturnTask] = useState<KanbanTask | null>(null);
+  const [returnReasonInput, setReturnReasonInput] = useState("");
+  const [returnReasonError, setReturnReasonError] = useState("");
+
+  // Phân quyền trên bảng tiến độ
+  const isLeader = Boolean(currentUser?.isGroupLeader);
+  const isMyTask = (task: KanbanTask) =>
+    Boolean(currentUser?.name) && task.assigneeName === currentUser?.name;
+  // Thành viên chỉ cập nhật việc của mình và không đụng vào thẻ Chờ duyệt / Hoàn thành
+  const canEditTask = (task: KanbanTask) =>
+    isLeader ||
+    (isMyTask(task) &&
+      task.status !== "Chờ duyệt" &&
+      task.status !== "Hoàn thành");
+  const isHttpLink = (value: string) => /^https?:\/\/\S+$/i.test(value);
+
   // Determine active milestone for contextual banner
   const activeMilestone =
     selectedMilestoneId !== "all"
       ? milestones.find((m) => m.id === selectedMilestoneId)
-      : milestones.find((m) => m.status === "Đang mở (Nước rút)") ||
+      : milestones.find((m) => m.status === "Đang mở") ||
         milestones[0];
 
   const columns: { id: TaskStatus; label: string; headerColor: string }[] = [
@@ -101,9 +121,7 @@ export const KanbanView: React.FC = () => {
     if (activeFilter === "overdue" && !isOverdue) return false;
     if (
       activeFilter === "mine" &&
-      currentUser &&
-      !task.assigneeName.includes(currentUser.name) &&
-      !task.assigneeName.includes("Nguyễn Văn A")
+      !isMyTask(task)
     ) {
       return false;
     }
@@ -152,22 +170,157 @@ export const KanbanView: React.FC = () => {
       direction === "next" ? currentIndex + 1 : currentIndex - 1;
 
     if (nextIndex >= 0 && nextIndex < statusOrder.length) {
-      const nextStatus = statusOrder[nextIndex];
-
-      // Chỉ Trưởng nhóm mới được chuyển task từ "Chờ duyệt" → "Hoàn thành"
-      if (currentStatus === "Chờ duyệt" && nextStatus === "Hoàn thành") {
-        if (!currentUser?.isGroupLeader) {
-          showToast(
-            "Chỉ Trưởng nhóm mới được duyệt công việc sang Hoàn thành!",
-            "warning",
-          );
-          return;
-        }
-      }
-
-      moveTask(taskId, nextStatus);
-      showToast(`Đã chuyển công việc sang cột "${nextStatus}"`, "info");
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+      requestMoveTask(task, statusOrder[nextIndex]);
     }
+  };
+
+  // Mở ô nhập minh chứng để gửi duyệt
+  const openSubmitReview = (task: KanbanTask) => {
+    setSubmitReviewTask(task);
+    setEvidenceInput(task.evidenceLink || "");
+  };
+
+  // Mở ô nhập lý do trả lại
+  const openReturnTask = (task: KanbanTask) => {
+    setReturnTask(task);
+    setReturnReasonInput("");
+    setReturnReasonError("");
+  };
+
+  // Người được giao xác nhận gửi duyệt: Đang thực hiện → Chờ duyệt (minh chứng không bắt buộc)
+  const handleConfirmSubmitReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!submitReviewTask) return;
+    if (!isMyTask(submitReviewTask) || submitReviewTask.status !== "Đang thực hiện") {
+      showToast(
+        "Chỉ người được giao mới gửi duyệt công việc đang thực hiện của mình.",
+        "warning",
+      );
+      setSubmitReviewTask(null);
+      return;
+    }
+    updateTask(submitReviewTask.id, {
+      status: "Chờ duyệt",
+      evidenceLink: evidenceInput.trim(),
+      returnReason: "",
+    });
+    showToast("Đã gửi công việc cho Trưởng nhóm duyệt.", "success");
+    setSubmitReviewTask(null);
+    setEvidenceInput("");
+  };
+
+  // Trưởng nhóm duyệt "Đạt": Chờ duyệt → Hoàn thành
+  const handleApproveTask = (task: KanbanTask) => {
+    if (!isLeader) {
+      showToast("Chỉ Trưởng nhóm mới được duyệt công việc.", "warning");
+      return;
+    }
+    if (task.status !== "Chờ duyệt") return;
+    updateTask(task.id, { status: "Hoàn thành", returnReason: "" });
+    showToast(`Đã duyệt "Đạt" — công việc chuyển sang Hoàn thành.`, "success");
+  };
+
+  // Trưởng nhóm "Trả lại" (bắt buộc lý do): Chờ duyệt → Đang thực hiện
+  const handleConfirmReturn = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!returnTask) return;
+    if (!isLeader) {
+      showToast("Chỉ Trưởng nhóm mới được trả lại công việc.", "warning");
+      setReturnTask(null);
+      return;
+    }
+    const reason = returnReasonInput.trim();
+    if (!reason) {
+      setReturnReasonError("Vui lòng nhập lý do trả lại.");
+      return;
+    }
+    updateTask(returnTask.id, {
+      status: "Đang thực hiện",
+      returnReason: reason,
+    });
+    showToast("Đã trả lại công việc về cột Đang thực hiện.", "info");
+    setReturnTask(null);
+    setReturnReasonInput("");
+    setReturnReasonError("");
+  };
+
+  // Mọi thao tác chuyển cột (mũi tên / kéo thả) đều đi qua đây để kiểm tra quyền
+  const requestMoveTask = (task: KanbanTask, targetStatus: TaskStatus) => {
+    if (task.status === targetStatus) return;
+
+    // Không ai được chuyển tay vào cột "Quá hạn" (hệ thống tự gắn theo hạn chót)
+    if (targetStatus === "Quá hạn") {
+      showToast(
+        'Không thể chuyển tay vào cột "Quá hạn" — hệ thống tự cập nhật theo hạn chót.',
+        "warning",
+      );
+      return;
+    }
+
+    if (!isLeader && !isMyTask(task)) {
+      showToast("Bạn chỉ được cập nhật công việc được giao cho mình.", "warning");
+      return;
+    }
+
+    // Thẻ đang chờ duyệt: thành viên không được đổi; Trưởng nhóm chỉ Đạt hoặc Trả lại
+    if (task.status === "Chờ duyệt") {
+      if (!isLeader) {
+        showToast(
+          "Công việc đang chờ Trưởng nhóm duyệt, bạn không thể thay đổi.",
+          "warning",
+        );
+        return;
+      }
+      if (targetStatus === "Hoàn thành") {
+        handleApproveTask(task);
+        return;
+      }
+      if (targetStatus === "Đang thực hiện") {
+        openReturnTask(task);
+        return;
+      }
+      showToast('Thẻ "Chờ duyệt" chỉ có thể "Đạt" hoặc "Trả lại".', "warning");
+      return;
+    }
+
+    if (task.status === "Hoàn thành" && !isLeader) {
+      showToast("Công việc đã hoàn thành, bạn không thể thay đổi.", "warning");
+      return;
+    }
+
+    // Chỉ lên "Hoàn thành" khi Trưởng nhóm duyệt "Đạt" ở thẻ "Chờ duyệt"
+    if (targetStatus === "Hoàn thành") {
+      showToast(
+        isLeader
+          ? 'Công việc cần được gửi duyệt, sau đó bấm "Đạt" để chuyển sang Hoàn thành.'
+          : "Chỉ Trưởng nhóm mới được duyệt công việc sang Hoàn thành!",
+        "warning",
+      );
+      return;
+    }
+
+    // Vào "Chờ duyệt" chỉ qua "Gửi duyệt" của người được giao
+    if (targetStatus === "Chờ duyệt") {
+      if (task.status === "Đang thực hiện" && isMyTask(task)) {
+        openSubmitReview(task);
+        return;
+      }
+      showToast(
+        'Chỉ người được giao mới "Gửi duyệt" thẻ Đang thực hiện của mình.',
+        "warning",
+      );
+      return;
+    }
+
+    if (task.status === "Quá hạn") {
+      // Rời cột Quá hạn = thành viên tiếp tục làm
+      updateTask(task.id, { status: targetStatus, overdueResumed: true });
+    } else {
+      moveTask(task.id, targetStatus);
+    }
+    showToast(`Đã chuyển công việc sang cột "${targetStatus}"`, "info");
   };
 
   // Drag and drop handlers
@@ -185,25 +338,20 @@ export const KanbanView: React.FC = () => {
     if (taskId) {
       const task = tasks.find((t) => t.id === taskId);
       if (!task) return;
-
-      if (task.status === "Chờ duyệt" && targetStatus === "Hoàn thành") {
-        if (!currentUser?.isGroupLeader) {
-          showToast(
-            "Chỉ Trưởng nhóm mới được duyệt công việc sang Hoàn thành!",
-            "warning",
-          );
-          return;
-        }
-      }
-
-      moveTask(taskId, targetStatus);
-      showToast(`Đã chuyển công việc sang "${targetStatus}"`, "info");
+      requestMoveTask(task, targetStatus);
     }
   };
 
   // Phục hồi task từ cột Quá hạn về Đang thực hiện
   const handleRestoreTask = (taskId: string) => {
-    moveTask(taskId, "Đang thực hiện");
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    if (!isLeader && !isMyTask(task)) {
+      showToast("Bạn chỉ được cập nhật công việc được giao cho mình.", "warning");
+      return;
+    }
+    // Đánh dấu "tiếp tục làm" để hệ thống không tự gắn Quá hạn lại
+    updateTask(taskId, { status: "Đang thực hiện", overdueResumed: true });
     showToast("Đã phục hồi công việc về cột Đang thực hiện.", "success");
   };
 
@@ -320,7 +468,7 @@ export const KanbanView: React.FC = () => {
               </div>
             </div>
             <div className="text-2xl font-bold text-slate-900">{classGroups.length} nhóm</div>
-            <p className="text-xs text-slate-500 mt-1">46/48 SV đã tham gia nhóm</p>
+            <p className="text-xs text-slate-500 mt-1">{classGroups.reduce((sum, g) => sum + g.memberCount, 0)} SV đã tham gia nhóm</p>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
@@ -756,13 +904,16 @@ export const KanbanView: React.FC = () => {
               <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
             </button>
 
-            <button
-              onClick={() => setIsNewTaskModalOpen(true)}
-              className="px-5 py-2.5 rounded-xl text-white font-semibold text-xs sm:text-sm transition flex items-center gap-2 cursor-pointer shadow-sm bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Tạo công việc mới</span>
-            </button>
+            {/* Chỉ Trưởng nhóm được tạo / giao việc */}
+            {isLeader && (
+              <button
+                onClick={() => setIsNewTaskModalOpen(true)}
+                className="px-5 py-2.5 rounded-xl text-white font-semibold text-xs sm:text-sm transition flex items-center gap-2 cursor-pointer shadow-sm bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tạo công việc mới</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -927,13 +1078,18 @@ export const KanbanView: React.FC = () => {
                       task.status,
                     );
                     const isOverdueColumn = task.status === "Quá hạn";
+                    const mine = isMyTask(task);
+                    const editable = canEditTask(task);
+                    const isPendingReview = task.status === "Chờ duyệt";
 
                     return (
                       <div
                         key={task.id}
-                        draggable
+                        draggable={editable}
                         onDragStart={(e) => handleDragStart(e, task.id)}
-                        className={`p-4 rounded-xl bg-white transition hover:shadow-md cursor-grab active:cursor-grabbing space-y-3 ${
+                        className={`p-4 rounded-xl bg-white transition hover:shadow-md space-y-3 ${
+                          editable ? "cursor-grab active:cursor-grabbing" : ""
+                        } ${
                           isOverdue || isOverdueColumn
                             ? "ring-2 ring-rose-300"
                             : ""
@@ -974,6 +1130,71 @@ export const KanbanView: React.FC = () => {
                           {task.title}
                         </h4>
 
+                        {/* Lý do bị Trưởng nhóm trả lại */}
+                        {task.status === "Đang thực hiện" && task.returnReason && (
+                          <div className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 space-y-0.5">
+                            <div className="flex items-center gap-1.5 font-bold">
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Bị trả lại</span>
+                            </div>
+                            <p className="break-words">Lý do: {task.returnReason}</p>
+                          </div>
+                        )}
+
+                        {/* Liên kết minh chứng */}
+                        {task.evidenceLink && (
+                          <div className="text-xs text-slate-600 break-all">
+                            <span className="font-semibold">Minh chứng: </span>
+                            {isHttpLink(task.evidenceLink) ? (
+                              <a
+                                href={task.evidenceLink}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                              >
+                                <span>Mở liên kết</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : (
+                              <span>{task.evidenceLink}</span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Gửi duyệt: thẻ Đang thực hiện của chính mình */}
+                        {task.status === "Đang thực hiện" && mine && (
+                          <button
+                            type="button"
+                            onClick={() => openSubmitReview(task)}
+                            className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Gửi duyệt</span>
+                          </button>
+                        )}
+
+                        {/* Trưởng nhóm duyệt thẻ Chờ duyệt: Đạt / Trả lại */}
+                        {isPendingReview && isLeader && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleApproveTask(task)}
+                              className="py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Đạt</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openReturnTask(task)}
+                              className="py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Trả lại</span>
+                            </button>
+                          </div>
+                        )}
+
                         {/* Footer */}
                         <div className="pt-3 border-t flex items-center justify-between">
                           <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -982,7 +1203,7 @@ export const KanbanView: React.FC = () => {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            {isOverdueColumn ? (
+                            {!editable || isPendingReview ? null : isOverdueColumn ? (
                               <button
                                 type="button"
                                 onClick={() => handleRestoreTask(task.id)}
@@ -1099,7 +1320,113 @@ export const KanbanView: React.FC = () => {
         </div>
       </div>
 
-      <NewTaskModal />
+      {/* Ô nhập liên kết minh chứng khi Gửi duyệt */}
+      {submitReviewTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <form
+            onSubmit={handleConfirmSubmitReview}
+            noValidate
+            className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4"
+          >
+            <div>
+              <h3 className="font-bold text-slate-900 text-base">Gửi duyệt công việc</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                {submitReviewTask.code} • {submitReviewTask.title}
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">
+                Liên kết minh chứng (không bắt buộc)
+              </label>
+              <input
+                type="url"
+                autoFocus
+                value={evidenceInput}
+                onChange={(e) => setEvidenceInput(e.target.value)}
+                placeholder="https://github.com/... hoặc link Drive, Figma..."
+                className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setSubmitReviewTask(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Send className="w-4 h-4" />
+                <span>Xác nhận gửi duyệt</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Ô nhập lý do khi Trưởng nhóm Trả lại */}
+      {returnTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <form
+            onSubmit={handleConfirmReturn}
+            noValidate
+            className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4"
+          >
+            <div>
+              <h3 className="font-bold text-slate-900 text-base">Trả lại công việc</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                {returnTask.code} • {returnTask.title} • {returnTask.assigneeName}
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">
+                Lý do trả lại <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                rows={3}
+                autoFocus
+                value={returnReasonInput}
+                onChange={(e) => {
+                  setReturnReasonInput(e.target.value);
+                  if (returnReasonError) setReturnReasonError("");
+                }}
+                placeholder="Nêu rõ phần cần sửa hoặc bổ sung..."
+                className={`w-full text-xs sm:text-sm p-2.5 rounded-xl border outline-none ${
+                  returnReasonError
+                    ? "border-rose-400 focus:border-rose-500"
+                    : "border-slate-200 focus:border-blue-500"
+                }`}
+              />
+              {returnReasonError && (
+                <p className="mt-1 text-xs font-medium text-rose-600">
+                  {returnReasonError}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setReturnTask(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Xác nhận trả lại</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {isLeader && <NewTaskModal />}
     </div>
   );
 };

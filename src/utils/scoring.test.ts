@@ -8,23 +8,72 @@ import {
   validateMilestonesWeight,
   checkIsTaskOverdue,
   getContributionStatus,
+  markOverdueTasks,
 } from "./scoring.ts";
 
-test("calculateMatchScore applies 0.6 * skill + 0.4 * time correctly", () => {
-  // Test Case 1: Nguyen Van A (Skill 95, Time 87.5) -> (95 * 0.6) + (87.5 * 0.4) = 57 + 35 = 92%
-  const scoreA = calculateMatchScore(95, 87.5);
+test("markOverdueTasks moves late unfinished tasks to Quá hạn", () => {
+  const refDate = new Date("2026-12-18T10:00:00");
+  const tasks = [
+    { id: "late", dueDate: "17/12/2026", status: "Đang thực hiện" },
+    { id: "lateAssigned", dueDate: "01/12/2026", status: "Đã giao việc" },
+    { id: "done", dueDate: "17/12/2026", status: "Hoàn thành" },
+    { id: "pending", dueDate: "17/12/2026", status: "Chờ duyệt" },
+    { id: "resumed", dueDate: "17/12/2026", status: "Đang thực hiện", overdueResumed: true },
+    { id: "future", dueDate: "22/12/2026", status: "Mới tạo" },
+  ];
+  const result = markOverdueTasks(tasks, refDate);
+  const statusOf = (id: string) => result.find((t) => t.id === id)?.status;
+
+  assert.equal(statusOf("late"), "Quá hạn");
+  assert.equal(statusOf("lateAssigned"), "Quá hạn");
+  assert.equal(statusOf("done"), "Hoàn thành");
+  assert.equal(statusOf("pending"), "Chờ duyệt");
+  assert.equal(statusOf("resumed"), "Đang thực hiện");
+  assert.equal(statusOf("future"), "Mới tạo");
+
+  // Không còn gì để đổi -> trả về đúng mảng cũ (tránh vòng lặp cập nhật)
+  assert.equal(markOverdueTasks(result, refDate), result);
+});
+
+test("calculateMatchScore applies 0.4 * skill + 0.6 * time correctly", () => {
+  // Test Case 1: Skill 95, Time 90 -> (95 * 0.4) + (90 * 0.6) = 38 + 54 = 92%
+  const scoreA = calculateMatchScore(95, 90);
   assert.equal(scoreA, 92);
   assert.equal(isTeamRecommended(scoreA), true);
 
-  // Test Case 2: Tran Minh Duc (Skill 80, Time 82.5) -> (80 * 0.6) + (82.5 * 0.4) = 48 + 33 = 81%
-  const scoreDuc = calculateMatchScore(80, 82.5);
-  assert.equal(scoreDuc, 81);
+  // Test Case 2: Skill 80, Time 85 -> (80 * 0.4) + (85 * 0.6) = 32 + 51 = 83%
+  const scoreDuc = calculateMatchScore(80, 85);
+  assert.equal(scoreDuc, 83);
   assert.equal(isTeamRecommended(scoreDuc), true);
 
   // Test Case 3: Score < 80% should not be recommended
   const scoreLow = calculateMatchScore(70, 70);
   assert.equal(scoreLow, 70);
   assert.equal(isTeamRecommended(scoreLow), false);
+
+  // Lịch rảnh nặng hơn kỹ năng: Skill 100, Time 50 -> 40 + 30 = 70%
+  assert.equal(calculateMatchScore(100, 50), 70);
+  // Skill 50, Time 100 -> 20 + 60 = 80%
+  assert.equal(calculateMatchScore(50, 100), 80);
+});
+
+test("calculateMatchScore caps at 28% when no free slot overlaps", () => {
+  // Đủ kỹ năng nhưng không trùng buổi nào: 100 * 0.4 + 0 = 40 -> giới hạn 28%
+  const noOverlap = calculateMatchScore(100, 0, 0);
+  assert.equal(noOverlap, 28);
+  assert.equal(isTeamRecommended(noOverlap), false);
+
+  // Điểm vốn đã thấp hơn 28% thì giữ nguyên: 50 * 0.4 = 20%
+  assert.equal(calculateMatchScore(50, 0, 0), 20);
+
+  // Nhóm chưa khai lịch (điểm lịch mặc định 70, 0 buổi trùng) -> không giới hạn
+  assert.equal(calculateMatchScore(100, 70, 0), 82);
+
+  // Có buổi trùng -> không giới hạn: 100 * 0.4 + 50 * 0.6 = 70%
+  assert.equal(calculateMatchScore(100, 50, 3), 70);
+
+  // Không truyền matchedSlots -> không giới hạn
+  assert.equal(calculateMatchScore(100, 0), 40);
 });
 
 test("calculateContributionScore applies 50% completion + 50% peer score correctly", () => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useApp } from "../context/AppContext.tsx";
+import { useApp, GroupMatchResult } from "../context/AppContext.tsx";
 import { TimeSlot, DayOfWeek } from "../types/index.ts";
-import { calculateMatchScore, isTeamRecommended } from "../utils/scoring.ts";
+import { isTeamRecommended, NO_OVERLAP_MAX_SCORE } from "../utils/scoring.ts";
 import { groupService } from "../services/groupService.ts";
 import { GroupMembersCard } from "../components/GroupMembersCard.tsx";
 import {
@@ -23,7 +23,6 @@ import {
   Filter,
   BookOpen,
   LogOut,
-  UserPlus,
 } from "lucide-react";
 import { ReviewApplicantsModal } from "./ReviewApplicantsModal.tsx";
 
@@ -31,13 +30,13 @@ export const MatchmakingView: React.FC = () => {
   const {
     scheduleMatrix,
     toggleScheduleSlot,
+    saveUserSkills,
     setIsApplicantModalOpen,
     applicants,
     currentTeamCount,
     sendJoinRequest,
     findMatchingGroups,
     createNewGroup,
-    joinGroupDirectly,
     leaveCurrentGroup,
     currentRole,
     showToast,
@@ -118,12 +117,17 @@ export const MatchmakingView: React.FC = () => {
     "DevOps & Docker",
   ];
 
+  // Nạp kỹ năng đã lưu trong hồ sơ khi đăng nhập
+  useEffect(() => {
+    if (currentUser?.skills?.length) setSelectedSkills(currentUser.skills);
+  }, [currentUser?.id]);
+
   const toggleSkill = (skill: string) => {
-    if (selectedSkills.includes(skill)) {
-      setSelectedSkills(selectedSkills.filter((s) => s !== skill));
-    } else {
-      setSelectedSkills([...selectedSkills, skill]);
-    }
+    const next = selectedSkills.includes(skill)
+      ? selectedSkills.filter((s) => s !== skill)
+      : [...selectedSkills, skill];
+    setSelectedSkills(next);
+    saveUserSkills(next);
   };
 
   // Calculate free slots count
@@ -134,24 +138,11 @@ export const MatchmakingView: React.FC = () => {
     });
   });
 
-  // Calculate Time Score based on free slots (assuming ideal overlap is 4+ sessions)
-  const timeScore = Math.min(100, Math.round((freeSlotsCount / 10) * 100));
-  // Calculate Skill Score based on complementary skills
-  const skillScore = Math.min(
-    100,
-    Math.round((selectedSkills.length / 3) * 95),
-  );
-  // Core formula: FinalScore = (SkillScore * 0.6) + (TimeScore * 0.4)
-  const finalScore = calculateMatchScore(skillScore, timeScore);
-  const isRecommended = isTeamRecommended(finalScore);
-
   const pendingCount = applicants.filter((a) => a.status === "pending").length;
 
   // Track whether user has triggered the "Tìm nhóm" action
   const [hasSearched, setHasSearched] = useState(false);
-  const [matchingGroups, setMatchingGroups] = useState<
-    Array<{ id: string; name: string; matchScore: number; commonSlotsCount?: number }>
-  >([]);
+  const [matchingGroups, setMatchingGroups] = useState<GroupMatchResult[]>([]);
 
   const hasGroup = Boolean(currentUser?.teamId);
 
@@ -169,9 +160,9 @@ export const MatchmakingView: React.FC = () => {
     const results = await findMatchingGroups(selectedSkills, scheduleMatrix);
     setMatchingGroups(results);
 
-    if (results.length > 0 && results[0].matchScore >= 70) {
+    if (results.length > 0 && isTeamRecommended(results[0].matchScore)) {
       showToast(
-        `Tìm thấy ${results.length} nhóm phù hợp! Điểm cao nhất: ${results[0].matchScore}%.`,
+        `Tìm thấy ${results.length} nhóm, có nhóm khuyên chọn! Điểm cao nhất: ${results[0].matchScore}%.`,
         "success",
       );
     } else if (results.length > 0) {
@@ -199,9 +190,15 @@ export const MatchmakingView: React.FC = () => {
     }
   };
 
-  const handleSendJoin = (targetGroupId?: string) => {
-    const targetGroup = targetGroupId || matchingGroups[0]?.id || "nhom_04";
-    sendJoinRequest(selectedSkills, userNote, targetGroup);
+  // Gửi yêu cầu kèm điểm phù hợp thật của sinh viên với nhóm đó.
+  // Nếu chưa bấm "Tìm nhóm" thì tính điểm trước khi gửi.
+  const handleSendJoin = async (targetGroupId: string) => {
+    let match = matchingGroups.find((g) => g.id === targetGroupId);
+    if (!match) {
+      const results = await findMatchingGroups(selectedSkills, scheduleMatrix);
+      match = results.find((g) => g.id === targetGroupId);
+    }
+    sendJoinRequest(selectedSkills, userNote, targetGroupId, match);
   };
 
   const handleLeaveGroup = async () => {
@@ -210,16 +207,14 @@ export const MatchmakingView: React.FC = () => {
     }
   };
 
-  const handleDirectJoin = async (groupId: string) => {
-    await joinGroupDirectly(groupId);
-  };
-
   // ==========================================
   // LECTURER VIEW: QUẢN LÝ DANH MỤC NHÓM & ĐỀ TÀI
   // ==========================================
   if (currentRole === "lecturer") {
     const fullCount = classGroups.filter((g) => g.status === "Đủ thành viên").length;
     const recruitingCount = classGroups.filter((g) => g.status === "Đang tuyển thành viên").length;
+    const joinedStudents = classGroups.reduce((sum, g) => sum + g.memberCount, 0);
+    const totalSeats = classGroups.reduce((sum, g) => sum + g.maxMembers, 0);
 
     const filteredClassGroups = classGroups.filter((group) => {
       if (lecturerFilter === "full" && group.status !== "Đủ thành viên") return false;
@@ -305,12 +300,14 @@ export const MatchmakingView: React.FC = () => {
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
             <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">
-              Tỷ lệ có nhóm toàn khóa
+              Tỷ lệ lấp đầy chỗ trong nhóm
             </span>
             <div className="text-2xl sm:text-3xl font-extrabold text-indigo-700 mt-1">
-              95.8%
+              {totalSeats > 0 ? ((joinedStudents / totalSeats) * 100).toFixed(1) : "0"}%
             </div>
-            <p className="text-xs text-slate-500 mt-1">46/48 sinh viên đã vào nhóm</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {joinedStudents}/{totalSeats} chỗ đã có sinh viên
+            </p>
           </div>
         </div>
 
@@ -716,65 +713,69 @@ export const MatchmakingView: React.FC = () => {
                 {/* Search Results */}
                 {hasSearched && matchingGroups.length > 0 ? (
                   <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 mb-3 animate-in fade-in space-y-3">
-                    <div className="text-center">
-                      <div className="text-xs text-slate-500 mb-1">
-                        Kết quả ghép nhóm theo lịch &amp; kỹ năng
-                      </div>
-                      <div
-                        className={`text-3xl font-extrabold mb-1 ${
-                          matchingGroups[0].matchScore >= 70
-                            ? "text-blue-600"
-                            : matchingGroups[0].matchScore >= 40
-                            ? "text-amber-600"
-                            : "text-rose-600"
-                        }`}
-                      >
-                        {matchingGroups[0].matchScore}%
-                      </div>
-                      <p className="text-sm font-bold text-slate-800">
-                        {matchingGroups[0].name}
-                      </p>
+                    <div className="text-center text-xs text-slate-500">
+                      {matchingGroups.length} nhóm còn chỗ, xếp theo điểm phù hợp giảm dần
                     </div>
 
-                    {matchingGroups[0].matchScore >= 70 ? (
-                      <div className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold">
-                        <Sparkles className="w-4 h-4 text-emerald-600" />
-                        <span>
-                          Phù hợp • Trùng {matchingGroups[0].commonSlotsCount ?? 0} buổi rảnh
-                        </span>
-                      </div>
-                    ) : matchingGroups[0].matchScore >= 40 ? (
-                      <div className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 text-xs font-semibold">
-                        <AlertCircle className="w-4 h-4 text-amber-600" />
-                        <span>
-                          Độ phù hợp trung bình • Trùng {matchingGroups[0].commonSlotsCount ?? 0} buổi rảnh
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-100 text-rose-800 text-xs font-semibold">
-                        <AlertCircle className="w-4 h-4 text-rose-600" />
-                        <span>
-                          ⚠️ Không trùng lịch rảnh ({matchingGroups[0].commonSlotsCount ?? 0} buổi trùng)
-                        </span>
-                      </div>
-                    )}
+                    {/* Danh sách nhóm theo điểm giảm dần (UC04) */}
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {matchingGroups.map((g) => {
+                        const slots = g.commonSlotsCount ?? 0;
+                        const recommended = isTeamRecommended(g.matchScore);
+                        // Không trùng lịch: 0 buổi trùng và điểm đã bị giới hạn (nhóm có khai lịch)
+                        const noOverlap =
+                          slots === 0 && g.matchScore <= NO_OVERLAP_MAX_SCORE;
+                        return (
+                          <div
+                            key={g.id}
+                            className={`p-3 rounded-xl bg-white border space-y-2 ${
+                              recommended ? "border-emerald-300" : "border-slate-200"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-sm font-bold text-slate-800 leading-snug">
+                                {g.name}
+                              </p>
+                              <span
+                                className={`text-lg font-extrabold shrink-0 ${
+                                  recommended
+                                    ? "text-blue-600"
+                                    : g.matchScore >= 40
+                                    ? "text-amber-600"
+                                    : "text-rose-600"
+                                }`}
+                              >
+                                {g.matchScore}%
+                              </span>
+                            </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <button
-                        onClick={() => handleDirectJoin(matchingGroups[0].id)}
-                        className="py-2.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer"
-                      >
-                        <UserPlus className="w-3.5 h-3.5" />
-                        <span>Tham gia ngay</span>
-                      </button>
+                            {noOverlap ? (
+                              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 text-xs font-semibold">
+                                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                <span>⚠️ Không trùng lịch rảnh (0 buổi trùng)</span>
+                              </div>
+                            ) : recommended ? (
+                              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold">
+                                <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span>Khuyên chọn • Trùng {slots} buổi rảnh</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 text-xs font-semibold">
+                                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                <span>Trùng {slots} buổi rảnh</span>
+                              </div>
+                            )}
 
-                      <button
-                        onClick={() => handleSendJoin(matchingGroups[0].id)}
-                        className="py-2.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>Gửi yêu cầu</span>
-                      </button>
+                            <button
+                              onClick={() => handleSendJoin(g.id)}
+                              className="w-full py-2 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                              <span>Gửi yêu cầu</span>
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ) : hasSearched && matchingGroups.length === 0 ? (
@@ -1039,28 +1040,13 @@ export const MatchmakingView: React.FC = () => {
                           Nhóm đã đủ thành viên (4/4)
                         </div>
                       ) : (
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            disabled={hasGroup}
-                            onClick={() => handleDirectJoin(group.id)}
-                            title={hasGroup ? "Bạn đã thuộc nhóm khác" : "Tham gia nhóm ngay"}
-                            className={`py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                              hasGroup
-                                ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
-                                : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs"
-                            }`}
-                          >
-                            <UserPlus className="w-3.5 h-3.5" />
-                            <span>Tham gia ngay</span>
-                          </button>
-
+                        <div>
                           <button
                             type="button"
                             disabled={hasGroup}
                             onClick={() => handleSendJoin(group.id)}
                             title={hasGroup ? "Bạn đã thuộc nhóm khác" : "Gửi đơn xin vào nhóm"}
-                            className={`py-2 px-2 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer ${
+                            className={`w-full py-2 px-2 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer ${
                               hasGroup
                                 ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
                                 : "bg-blue-600 hover:bg-blue-700 text-white shadow-2xs"

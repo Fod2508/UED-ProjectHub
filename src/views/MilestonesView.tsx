@@ -25,6 +25,7 @@ export const MilestonesView: React.FC = () => {
     milestones,
     milestoneSubmissions,
     submitMilestoneProgress,
+    reviewMilestoneSubmission,
     updateMilestone,
     allowInternalMilestone,
     setAllowInternalMilestone,
@@ -53,6 +54,35 @@ export const MilestonesView: React.FC = () => {
   const [subTitle, setSubTitle] = useState("");
   const [subLink, setSubLink] = useState("");
   const [subNote, setSubNote] = useState("");
+  const [subLinkError, setSubLinkError] = useState("");
+
+  // Kiểm duyệt bài nộp của Giảng viên (UC23)
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [reviewErrorId, setReviewErrorId] = useState<string | null>(null);
+
+  const handleReviewSubmission = (
+    submissionId: string,
+    status: "Đạt yêu cầu" | "Cần bổ sung",
+  ) => {
+    const note = (reviewNotes[submissionId] || "").trim();
+    // "Cần bổ sung" bắt buộc kèm nhận xét để nhóm biết phải sửa gì
+    if (status === "Cần bổ sung" && !note) {
+      setReviewErrorId(submissionId);
+      return;
+    }
+    setReviewErrorId(null);
+    reviewMilestoneSubmission(submissionId, status, note);
+    setReviewNotes((prev) => ({ ...prev, [submissionId]: "" }));
+  };
+
+  const submissionStatusStyle = (status: string) =>
+    status === "Đạt yêu cầu"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+      : status === "Cần bổ sung"
+      ? "bg-amber-50 text-amber-700 border-amber-200"
+      : "bg-blue-50 text-blue-700 border-blue-200";
+
+  const isGroupLeader = Boolean(currentUser?.isGroupLeader);
 
   const handleStartEditWeight = (id: string, currentWeight: number) => {
     setEditingMilestoneId(id);
@@ -69,7 +99,7 @@ export const MilestonesView: React.FC = () => {
     currentStatus: string,
   ) => {
     const nextStatus =
-      currentStatus === "Đang mở (Nước rút)" ? "Đã khóa" : "Đang mở (Nước rút)";
+      currentStatus === "Đang mở" ? "Đã khóa" : "Đang mở";
 
     // Update milestone status
     await updateMilestone(id, { status: nextStatus as any });
@@ -89,6 +119,23 @@ export const MilestonesView: React.FC = () => {
       return;
     }
 
+    if (!currentUser.isGroupLeader) {
+      showToast("Chỉ Trưởng nhóm mới được nộp hoặc sửa bài cột mốc.", "warning");
+      return;
+    }
+
+    const link = subLink.trim();
+    if (!link) {
+      setSubLinkError("Vui lòng nhập đường dẫn sản phẩm trước khi nộp bài.");
+      showToast("Thiếu đường dẫn sản phẩm. Vui lòng nhập link trước khi nộp bài.", "error");
+      return;
+    }
+    if (!/^https?:\/\/\S+$/i.test(link)) {
+      setSubLinkError("Đường dẫn sản phẩm phải bắt đầu bằng http:// hoặc https://.");
+      showToast("Đường dẫn sản phẩm không hợp lệ.", "error");
+      return;
+    }
+
     await submitMilestoneProgress({
       milestoneId: selectedMilestoneForSubmit.id,
       milestoneName: selectedMilestoneForSubmit.name,
@@ -97,7 +144,7 @@ export const MilestonesView: React.FC = () => {
       submittedBy: currentUser.id,
       submittedByName: currentUser.name,
       title: subTitle.trim() || `Báo cáo tiến độ - ${selectedMilestoneForSubmit.name}`,
-      deliverablesLink: subLink.trim() || "https://github.com",
+      deliverablesLink: link,
       note: subNote.trim() || "Nhóm đã hoàn thành các sản phẩm yêu cầu của cột mốc.",
     });
 
@@ -189,7 +236,7 @@ export const MilestonesView: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-800">
                   {courseMilestones.map((m) => {
-                    const isSprintActive = m.status === "Đang mở (Nước rút)";
+                    const isSprintActive = m.status === "Đang mở";
                     const mySubmission = milestoneSubmissions.find(
                       (s) => s.milestoneId === m.id && s.groupId === currentUser?.teamId,
                     );
@@ -240,13 +287,13 @@ export const MilestonesView: React.FC = () => {
                               <span>Đã hoàn thành</span>
                             </span>
                           )}
-                          {m.status === "Đang mở (Nước rút)" && (
+                          {m.status === "Đang mở" && (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold">
                               <span className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
                               </span>
-                              <span>Đang mở (Nước rút)</span>
+                              <span>Đang mở</span>
                             </span>
                           )}
                           {m.status === "Chưa mở" && (
@@ -270,25 +317,33 @@ export const MilestonesView: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => handleViewSubmission(m)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold hover:bg-emerald-100 transition cursor-pointer"
+                                title="Xem bài nộp và nhận xét của Giảng viên"
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-semibold hover:opacity-80 transition cursor-pointer ${submissionStatusStyle(mySubmission.status)}`}
                               >
-                                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Đã nộp bài</span>
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                <span>
+                                  {mySubmission.status === "Đã nộp"
+                                    ? "Đã nộp bài"
+                                    : mySubmission.status}
+                                </span>
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedMilestoneForSubmit(m);
-                                  setSubTitle(mySubmission.title);
-                                  setSubLink(mySubmission.deliverablesLink);
-                                  setSubNote(mySubmission.note);
-                                }}
-                                className="text-xs text-blue-600 hover:underline cursor-pointer"
-                              >
-                                Sửa
-                              </button>
+                              {isGroupLeader && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedMilestoneForSubmit(m);
+                                    setSubTitle(mySubmission.title);
+                                    setSubLink(mySubmission.deliverablesLink);
+                                    setSubNote(mySubmission.note);
+                                    setSubLinkError("");
+                                  }}
+                                  className="text-xs text-blue-600 hover:underline cursor-pointer"
+                                >
+                                  Sửa
+                                </button>
+                              )}
                             </div>
-                          ) : currentUser?.teamId ? (
+                          ) : currentUser?.teamId && isGroupLeader ? (
                             <button
                               type="button"
                               onClick={() => {
@@ -296,12 +351,17 @@ export const MilestonesView: React.FC = () => {
                                 setSubTitle(`Báo cáo tiến độ - ${m.name}`);
                                 setSubLink("");
                                 setSubNote("");
+                                setSubLinkError("");
                               }}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
                             >
                               <UploadCloud className="w-3.5 h-3.5" />
                               <span>Nộp bài tiến độ</span>
                             </button>
+                          ) : currentUser?.teamId ? (
+                            <span className="text-xs text-slate-500 italic">
+                              Trưởng nhóm sẽ nộp bài
+                            </span>
                           ) : (
                             <span className="text-xs text-slate-400 italic">
                               Cần vào nhóm để nộp
@@ -426,7 +486,7 @@ export const MilestonesView: React.FC = () => {
                               <CheckCircle className="w-3.5 h-3.5" />
                               <span>Hoàn thành</span>
                             </span>
-                          ) : im.status === "Đang mở (Nước rút)" ? (
+                          ) : im.status === "Đang mở" ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold">
                               <span>Đang làm</span>
                             </span>
@@ -442,7 +502,7 @@ export const MilestonesView: React.FC = () => {
                               onClick={() => {
                                 const nextStatus =
                                   im.status === "Đã hoàn thành"
-                                    ? "Đang mở (Nước rút)"
+                                    ? "Đang mở"
                                     : "Đã hoàn thành";
                                 updateMilestone(im.id, { status: nextStatus });
                               }}
@@ -564,7 +624,7 @@ export const MilestonesView: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-800">
                   {courseMilestones.map((m) => {
-                    const isSprintActive = m.status === "Đang mở (Nước rút)";
+                    const isSprintActive = m.status === "Đang mở";
 
                     return (
                       <tr
@@ -647,13 +707,13 @@ export const MilestonesView: React.FC = () => {
                             </span>
                           )}
 
-                          {m.status === "Đang mở (Nước rút)" && (
+                          {m.status === "Đang mở" && (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold">
                               <span className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
                               </span>
-                              <span>Đang mở (Nước rút)</span>
+                              <span>Đang mở</span>
                             </span>
                           )}
 
@@ -696,7 +756,7 @@ export const MilestonesView: React.FC = () => {
                               </span>
                             </button>
 
-                            {m.status === "Đang mở (Nước rút)" && (
+                            {m.status === "Đang mở" && (
                               <>
                                 <span className="text-slate-300">|</span>
                                 <button
@@ -865,7 +925,7 @@ export const MilestonesView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleConfirmSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleConfirmSubmit} noValidate className="p-6 space-y-4">
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">
                   Tiêu đề báo cáo / Tên chương nộp <span className="text-rose-500">*</span>
@@ -888,10 +948,23 @@ export const MilestonesView: React.FC = () => {
                   type="url"
                   required
                   value={subLink}
-                  onChange={(e) => setSubLink(e.target.value)}
+                  onChange={(e) => {
+                    setSubLink(e.target.value);
+                    if (subLinkError) setSubLinkError("");
+                  }}
                   placeholder="https://github.com/your-team/repo hoặc link Drive..."
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
+                  className={`w-full text-xs sm:text-sm p-2.5 rounded-xl border outline-none ${
+                    subLinkError
+                      ? "border-rose-400 focus:border-rose-500"
+                      : "border-slate-200 focus:border-blue-500"
+                  }`}
                 />
+                {subLinkError && (
+                  <p className="mt-1 text-xs font-medium text-rose-600 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>{subLinkError}</span>
+                  </p>
+                )}
               </div>
 
               <div>
@@ -960,7 +1033,7 @@ export const MilestonesView: React.FC = () => {
                 <div className="p-8 text-center text-slate-500 text-xs sm:text-sm space-y-2">
                   <p className="font-medium text-slate-700">Chưa có nhóm nào nộp bài cho cột mốc này.</p>
                   <p className="text-xs text-slate-400">
-                    Sinh viên trong nhóm có thể bấm nút <strong>"Nộp bài tiến độ"</strong> ở bảng cột mốc để gửi báo cáo &amp; link sản phẩm.
+                    Trưởng nhóm có thể bấm nút <strong>"Nộp bài tiến độ"</strong> ở bảng cột mốc để gửi báo cáo &amp; link sản phẩm.
                   </p>
                 </div>
               ) : (
@@ -981,7 +1054,7 @@ export const MilestonesView: React.FC = () => {
                               {sub.groupName}
                             </span>
                           </div>
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold shrink-0">
+                          <span className={`px-2.5 py-0.5 rounded-full border text-xs font-semibold shrink-0 ${submissionStatusStyle(sub.status)}`}>
                             {sub.status}
                           </span>
                         </div>
@@ -1008,6 +1081,57 @@ export const MilestonesView: React.FC = () => {
                             </a>
                           )}
                         </div>
+
+                        {/* Nhận xét của Giảng viên */}
+                        {sub.lecturerFeedback && (
+                          <p className="text-xs text-slate-700 leading-relaxed bg-amber-50/70 p-2.5 rounded-lg border border-amber-100">
+                            <strong>Nhận xét của Giảng viên:</strong> {sub.lecturerFeedback}
+                          </p>
+                        )}
+
+                        {/* Giảng viên kiểm duyệt: Đạt yêu cầu / Cần bổ sung */}
+                        {currentRole === "lecturer" && (
+                          <div className="pt-2 border-t border-slate-100 space-y-2">
+                            <textarea
+                              rows={2}
+                              value={reviewNotes[sub.id] || ""}
+                              onChange={(e) => {
+                                setReviewNotes((prev) => ({
+                                  ...prev,
+                                  [sub.id]: e.target.value,
+                                }));
+                                if (reviewErrorId === sub.id) setReviewErrorId(null);
+                              }}
+                              placeholder="Nhận xét cho nhóm (bắt buộc khi chọn Cần bổ sung)..."
+                              className={`w-full text-xs p-2 rounded-lg border outline-none ${
+                                reviewErrorId === sub.id
+                                  ? "border-rose-400"
+                                  : "border-slate-200 focus:border-blue-500"
+                              }`}
+                            />
+                            {reviewErrorId === sub.id && (
+                              <p className="text-xs font-medium text-rose-600">
+                                Vui lòng nhập nhận xét khi chọn Cần bổ sung.
+                              </p>
+                            )}
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleReviewSubmission(sub.id, "Cần bổ sung")}
+                                className="px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold cursor-pointer"
+                              >
+                                Cần bổ sung
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleReviewSubmission(sub.id, "Đạt yêu cầu")}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer"
+                              >
+                                Đạt yêu cầu
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                 </div>

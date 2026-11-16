@@ -12,6 +12,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "../config/firebase.ts";
+import { calculateMatchScore } from "../utils/scoring.ts";
 
 export interface Group {
   id: string;
@@ -31,6 +32,15 @@ export interface Group {
   status: "recruiting" | "full" | "active" | "completed";
   skillsNeeded: string[];
   schedule?: Record<string, Record<string, boolean>>;
+}
+
+// Điểm so khớp giữa một sinh viên và một nhóm
+export interface GroupMatchInfo {
+  matchScore: number;
+  commonSlotsCount: number;
+  skillScore: number;
+  scheduleScore: number;
+  matchedSlotLabels: string[];
 }
 
 class GroupService {
@@ -116,7 +126,7 @@ class GroupService {
     userSkills: string[],
     userSchedule: Record<string, Record<string, boolean>>,
     courseId: string,
-  ): Promise<Array<Group & { matchScore: number; commonSlotsCount: number }>> {
+  ): Promise<Array<Group & GroupMatchInfo>> {
     try {
       const q = query(
         this.groupsCollection,
@@ -125,7 +135,7 @@ class GroupService {
       );
 
       const snapshot = await getDocs(q);
-      const groups: Array<Group & { matchScore: number; commonSlotsCount: number }> = [];
+      const groups: Array<Group & GroupMatchInfo> = [];
 
       snapshot.forEach((doc) => {
         const groupData = doc.data() as Group;
@@ -140,21 +150,25 @@ class GroupService {
           userSkills,
           groupData.skillsNeeded,
         );
-        const { score: scheduleScore, matchedSlots } = this.calculateScheduleMatch(
+        const { score: scheduleScore, matchedSlots, matchedSlotLabels } = this.calculateScheduleMatch(
           userSchedule,
           groupData.schedule || {},
         );
 
-        // If matchedSlots === 0 and group has requirements, heavily penalize (max 25%)
-        let matchScore = Math.round(skillScore * 0.4 + scheduleScore * 0.6);
-        if (matchedSlots === 0 && scheduleScore === 0) {
-          matchScore = Math.min(28, Math.round(skillScore * 0.25));
-        }
+        // Điểm phù hợp = Kỹ năng × 40% + Lịch rảnh × 60% (không trùng buổi nào: tối đa 28%)
+        const matchScore = calculateMatchScore(
+          skillScore,
+          scheduleScore,
+          matchedSlots,
+        );
 
         groups.push({
           ...groupData,
           matchScore,
           commonSlotsCount: matchedSlots,
+          skillScore,
+          scheduleScore,
+          matchedSlotLabels,
         });
       });
 
@@ -408,9 +422,10 @@ class GroupService {
   public calculateScheduleMatch(
     userSchedule: Record<string, Record<string, boolean>>,
     groupSchedule: Record<string, Record<string, boolean>>,
-  ): { score: number; matchedSlots: number } {
+  ): { score: number; matchedSlots: number; matchedSlotLabels: string[] } {
     let totalGroupSlots = 0;
     let matchedSlots = 0;
+    const matchedSlotLabels: string[] = [];
 
     const days = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
     const timeSlots = ["Sáng", "Chiều", "Tối"];
@@ -424,6 +439,7 @@ class GroupService {
           totalGroupSlots++;
           if (userFree) {
             matchedSlots++;
+            matchedSlotLabels.push(`${day} ${time}`);
           }
         }
       });
@@ -431,11 +447,11 @@ class GroupService {
 
     if (totalGroupSlots === 0) {
       // If group didn't specify schedule, neutral score 70% with 0 specific matched
-      return { score: 70, matchedSlots: 0 };
+      return { score: 70, matchedSlots: 0, matchedSlotLabels };
     }
 
     const score = Math.round((matchedSlots / totalGroupSlots) * 100);
-    return { score, matchedSlots };
+    return { score, matchedSlots, matchedSlotLabels };
   }
 
   /**

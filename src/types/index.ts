@@ -38,6 +38,7 @@ export interface UserProfile {
   teamId?: string;
   teamName?: string;
   isGroupLeader?: boolean; // Trưởng nhóm có quyền duyệt applicants và tasks
+  skills?: string[]; // Hồ sơ năng lực (UC01)
 }
 
 export type DayOfWeek = "T2" | "T3" | "T4" | "T5" | "T6" | "T7" | "CN";
@@ -91,6 +92,9 @@ export interface KanbanTask {
   lecturerReviewed?: boolean;
   lecturerScore?: number;
   milestoneId?: string;
+  evidenceLink?: string; // Liên kết minh chứng khi gửi duyệt
+  returnReason?: string; // Lý do Trưởng nhóm trả lại
+  overdueResumed?: boolean; // Đã quá hạn nhưng thành viên tiếp tục làm (không tự gắn Quá hạn lại)
 }
 
 export interface MilestoneSubmission {
@@ -106,6 +110,7 @@ export interface MilestoneSubmission {
   deliverablesLink: string;
   note: string;
   status: "Đã nộp" | "Đạt yêu cầu" | "Cần bổ sung";
+  lecturerFeedback?: string; // Nhận xét của Giảng viên khi kiểm duyệt
 }
 
 export interface Milestone {
@@ -115,7 +120,7 @@ export interface Milestone {
   deliverables: string;
   dueDate: string;
   weight: number; // percentage
-  status: "Đã hoàn thành" | "Đang mở (Nước rút)" | "Chưa mở" | "Đã khóa";
+  status: "Đã hoàn thành" | "Đang mở" | "Chưa mở" | "Đã khóa";
   type?: "course" | "internal";
   teamId?: string;
   teamName?: string;
@@ -143,6 +148,8 @@ export interface MemberContributionData {
   completionRate: number; // e.g. 100, 80, 40 (%)
   hasOverdueTask: boolean;
   peerScoreAvg: number; // e.g. 4.8, 4.5, 3.8, 2.1
+  criteriaScores?: { c1: number; c2: number; c3: number }; // Điểm TB từng tiêu chí (1–5)
+  anonymousComment?: string; // Nhận xét ẩn danh từ đồng đội
   contributionScore: number; // Calculated via (completionRate*0.5) + (peerScoreAvg/5*100*0.5)
   status: "Đóng góp tích cực" | "Đạt chuẩn" | "Cảnh báo thiếu đóng góp";
   isWarning: boolean;

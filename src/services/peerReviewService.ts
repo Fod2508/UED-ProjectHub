@@ -181,13 +181,17 @@ export const peerReviewService = {
   subscribeToGroupPeerReviews(
     groupId: string,
     milestoneId: string,
+    reviewerId: string,
     callback: (reviews: PeerReviewEntry[]) => void,
   ): () => void {
     const reviewsRef = collection(db, "peerReviews");
+    // Chỉ lấy phiếu do chính người này chấm: luật Firestore không cho thành viên
+    // đọc phiếu của người khác (vì phiếu chứa reviewerId).
     const q = query(
       reviewsRef,
       where("groupId", "==", groupId),
       where("milestoneId", "==", milestoneId),
+      where("reviewerId", "==", reviewerId),
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {

@@ -3,9 +3,13 @@ import { useApp } from '../context/AppContext.tsx';
 import { X, Star, FileText, CheckCircle, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 export const EvaluationDetailModal: React.FC = () => {
-  const { viewingDetailMember, setViewingDetailMember } = useApp();
+  const { viewingDetailMember, setViewingDetailMember, criteriaWeights } = useApp();
 
   if (!viewingDetailMember) return null;
+
+  const criteria = viewingDetailMember.criteriaScores;
+  const showScore = (value?: number) =>
+    value === undefined ? "Chưa có dữ liệu" : `${value.toFixed(1)} / 5.0 ⭐`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -72,21 +76,21 @@ export const EvaluationDetailModal: React.FC = () => {
 
             <div className="p-3 rounded-xl border border-slate-200 space-y-2 text-xs">
               <div className="flex justify-between items-center">
-                <span>1. Mức độ &amp; tiến độ công việc (40%):</span>
+                <span>1. Tiến độ hoàn thành việc ({criteriaWeights.c1}%):</span>
                 <span className="font-bold text-slate-900">
-                  {viewingDetailMember.isWarning ? '2.5 / 5.0' : '4.8 / 5.0'} ⭐
+                  {showScore(criteria?.c1)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span>2. Chất lượng sản phẩm &amp; kỹ thuật (35%):</span>
+                <span>2. Chất lượng công việc ({criteriaWeights.c2}%):</span>
                 <span className="font-bold text-slate-900">
-                  {viewingDetailMember.isWarning ? '3.0 / 5.0' : '4.7 / 5.0'} ⭐
+                  {showScore(criteria?.c2)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span>3. Thái độ &amp; tinh thần làm việc nhóm (25%):</span>
+                <span>3. Thái độ làm việc nhóm ({criteriaWeights.c3}%):</span>
                 <span className="font-bold text-slate-900">
-                  {viewingDetailMember.isWarning ? '3.0 / 5.0' : '4.9 / 5.0'} ⭐
+                  {showScore(criteria?.c3)}
                 </span>
               </div>
               <div className="pt-2 border-t border-slate-100 flex justify-between items-center font-bold">
@@ -104,9 +108,9 @@ export const EvaluationDetailModal: React.FC = () => {
               Trích xuất nhận xét từ đồng đội (Đã bảo mật ẩn danh):
             </span>
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 italic">
-              {viewingDetailMember.name === 'Lê Văn Cúc'
-                ? '“Bạn Cúc có chuyên môn backend tốt, tuy nhiên thường xuyên chậm cập nhật tiến độ trên Kanban và để quá hạn task xác thực JWT làm ảnh hưởng đến tiến độ tích hợp chung của nhóm.”'
-                : '“Làm việc rất chủ động, hỗ trợ các thành viên khác nhiệt tình và hoàn thành đúng hạn các nhiệm vụ được phân công.”'}
+              {viewingDetailMember.anonymousComment
+                ? `“${viewingDetailMember.anonymousComment}”`
+                : 'Chưa có nhận xét.'}
             </div>
           </div>
 

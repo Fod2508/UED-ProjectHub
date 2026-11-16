@@ -13,6 +13,15 @@ import {
 import { db } from "../config/firebase";
 import { Milestone } from "../types";
 
+// Dữ liệu cũ trong Firestore còn lưu tên trạng thái "Đang mở (Nước rút)";
+// đọc lên thì quy về tên chuẩn "Đang mở".
+function normalizeMilestone(data: Record<string, unknown>): Milestone {
+  const m = data as unknown as Milestone;
+  return (m.status as string) === "Đang mở (Nước rút)"
+    ? { ...m, status: "Đang mở" }
+    : m;
+}
+
 export const milestoneService = {
   /**
    * Create a new milestone
@@ -47,10 +56,9 @@ export const milestoneService = {
     );
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Milestone[];
+    return snapshot.docs.map((doc) =>
+      normalizeMilestone({ id: doc.id, ...doc.data() }),
+    );
   },
 
   /**
@@ -95,10 +103,9 @@ export const milestoneService = {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const milestones = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Milestone[];
+      const milestones = snapshot.docs.map((doc) =>
+        normalizeMilestone({ id: doc.id, ...doc.data() }),
+      );
 
       callback(milestones);
     });

@@ -248,7 +248,7 @@ export const PeerReviewView: React.FC = () => {
             <div className="text-sm font-bold text-indigo-700 mt-2">
               {criteriaWeights.c1}% • {criteriaWeights.c2}% • {criteriaWeights.c3}%
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Tiến độ • Kỹ thuật • Hợp tác</p>
+            <p className="text-[11px] text-slate-400 mt-1">Tiến độ • Chất lượng • Thái độ</p>
           </div>
         </div>
 
@@ -561,7 +561,7 @@ export const PeerReviewView: React.FC = () => {
           <article className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-bold text-slate-900">
-                1. Mức độ và tiến độ hoàn thành công việc
+                1. Tiến độ hoàn thành việc
               </h4>
               <span className="text-xs font-bold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full">
                 Trọng số {criteriaWeights.c1}%
@@ -610,7 +610,7 @@ export const PeerReviewView: React.FC = () => {
           <article className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-bold text-slate-900">
-                2. Chất lượng sản phẩm và đóng góp kỹ thuật
+                2. Chất lượng công việc
               </h4>
               <span className="text-xs font-bold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full">
                 Trọng số {criteriaWeights.c2}%
@@ -656,7 +656,7 @@ export const PeerReviewView: React.FC = () => {
           <article className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-bold text-slate-900">
-                3. Thái độ hợp tác và tinh thần làm việc nhóm
+                3. Thái độ làm việc nhóm
               </h4>
               <span className="text-xs font-bold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full">
                 Trọng số {criteriaWeights.c3}%
@@ -843,7 +843,7 @@ const CriteriaConfigModal: React.FC<{
           {/* Criterion 1 */}
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">
-              1. Mức độ &amp; tiến độ công việc (%)
+              1. Tiến độ hoàn thành việc (%)
             </label>
             <input
               type="number"
@@ -858,7 +858,7 @@ const CriteriaConfigModal: React.FC<{
           {/* Criterion 2 */}
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">
-              2. Chất lượng sản phẩm &amp; kỹ thuật (%)
+              2. Chất lượng công việc (%)
             </label>
             <input
               type="number"
@@ -873,7 +873,7 @@ const CriteriaConfigModal: React.FC<{
           {/* Criterion 3 */}
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">
-              3. Thái độ &amp; tinh thần làm việc nhóm (%)
+              3. Thái độ làm việc nhóm (%)
             </label>
             <input
               type="number"

@@ -70,7 +70,7 @@ export const DashboardView: React.FC = () => {
     (t) => t.priority === "Ưu tiên Cao" && t.status !== "Hoàn thành",
   ).length;
   const activeMilestone = milestones.find(
-    (m) => m.status === "Đang mở (Nước rút)",
+    (m) => m.status === "Đang mở",
   ) ||
     milestones[1] || { name: "Cột mốc 2", dueDate: "15/12/2026" };
 

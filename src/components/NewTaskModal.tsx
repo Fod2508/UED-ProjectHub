@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext.tsx";
-import { TaskStatus } from "../types/index.ts";
+import { groupService } from "../services/groupService.ts";
 import { X, Plus, Calendar, Tag, User } from "lucide-react";
+
+const UNASSIGNED = "Chưa giao";
 
 export const NewTaskModal: React.FC = () => {
   const {
@@ -22,7 +24,7 @@ export const NewTaskModal: React.FC = () => {
   );
 
   const activeMilestone =
-    availableMilestones.find((m) => m.status === "Đang mở (Nước rút)") ||
+    availableMilestones.find((m) => m.status === "Đang mở") ||
     availableMilestones[0];
 
   const [title, setTitle] = useState("");
@@ -31,7 +33,6 @@ export const NewTaskModal: React.FC = () => {
   const [priority, setPriority] = useState<
     "Thường" | "Ưu tiên Cao" | "Khẩn cấp"
   >("Thường");
-  const [status, setStatus] = useState<TaskStatus>("Mới tạo");
   const [dueDate, setDueDate] = useState("2026-12-24"); // yyyy-mm-dd for native date input
   const [milestoneId, setMilestoneId] = useState(activeMilestone?.id || "m2");
 
@@ -39,6 +40,25 @@ export const NewTaskModal: React.FC = () => {
     name: currentUser?.name || "Nguyễn Văn A",
     avatar: currentUser?.avatarText || "NA",
   });
+
+  // Thành viên thật của nhóm (UC16: gán người phụ trách)
+  const [groupMembers, setGroupMembers] = useState<
+    Array<{ name: string; avatar: string }>
+  >([]);
+
+  useEffect(() => {
+    if (!isNewTaskModalOpen || !currentUser?.teamId) return;
+    let cancelled = false;
+    groupService.getGroupMembers(currentUser.teamId).then((members) => {
+      if (cancelled) return;
+      setGroupMembers(
+        members.map((m) => ({ name: m.name, avatar: m.avatarText })),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isNewTaskModalOpen, currentUser?.teamId]);
 
   if (!isNewTaskModalOpen) return null;
 
@@ -60,7 +80,8 @@ export const NewTaskModal: React.FC = () => {
       description: description.trim(),
       tag,
       priority,
-      status,
+      // Chưa có người phụ trách: Mới tạo; đã gán người: Đã giao việc
+      status: assignee.name === UNASSIGNED ? "Mới tạo" : "Đã giao việc",
       dueDate: formattedDueDate,
       assigneeName: assignee.name,
       assigneeAvatar: assignee.avatar,
@@ -77,10 +98,8 @@ export const NewTaskModal: React.FC = () => {
       name: currentUser?.name || "Nguyễn Văn A",
       avatar: currentUser?.avatarText || "NA",
     },
-    { name: "Trần Thu Hà", avatar: "TH" },
-    { name: "Đặng Minh", avatar: "DM" },
-    { name: "Lê Văn Cúc", avatar: "LC" },
-    { name: "Chưa giao", avatar: "?" },
+    ...groupMembers,
+    { name: UNASSIGNED, avatar: "?" },
   ];
 
   // Unique members list

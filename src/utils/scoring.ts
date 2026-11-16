@@ -9,21 +9,30 @@ export interface MilestoneItem {
   deliverables: string;
   dueDate: string;
   weight: number; // e.g. 20 (meaning 20%)
-  status: "Đã hoàn thành" | "Đang mở (Nước rút)" | "Chưa mở" | "Đã khóa";
+  status: "Đã hoàn thành" | "Đang mở" | "Chưa mở" | "Đã khóa";
 }
 
 /**
  * Giai đoạn 1 - Ghép nhóm:
- * Thuật toán tính điểm: FinalScore = (SkillScore * 0.6) + (TimeScore * 0.4)
+ * Điểm phù hợp = Kỹ năng × 40% + Lịch rảnh × 60%
  * SkillScore: 0 - 100
  * TimeScore: 0 - 100
+ * matchedSlots (không bắt buộc): số buổi rảnh trùng với nhóm. Nếu nhóm có lịch
+ * nhưng không trùng buổi nào (matchedSlots = 0 và TimeScore = 0) thì điểm bị
+ * giới hạn tối đa NO_OVERLAP_MAX_SCORE.
  */
+export const NO_OVERLAP_MAX_SCORE = 28;
+
 export function calculateMatchScore(
   skillScore: number,
   timeScore: number,
+  matchedSlots?: number,
 ): number {
-  const finalScore = skillScore * 0.6 + timeScore * 0.4;
-  return Math.round(finalScore);
+  const finalScore = Math.round(skillScore * 0.4 + timeScore * 0.6);
+  if (matchedSlots === 0 && timeScore === 0) {
+    return Math.min(NO_OVERLAP_MAX_SCORE, finalScore);
+  }
+  return finalScore;
 }
 
 /**
@@ -58,6 +67,34 @@ export function checkIsTaskOverdue(
   const now = referenceDate ?? new Date();
 
   return dueDate < now;
+}
+
+/**
+ * Giai đoạn 2 - Tự gắn trạng thái "Quá hạn" cho công việc trễ hạn chưa hoàn thành.
+ * Bỏ qua: việc đã Hoàn thành, việc đang Chờ duyệt (người làm đã nộp, đang đợi
+ * Trưởng nhóm), và việc đã được "tiếp tục làm" sau khi quá hạn (overdueResumed).
+ * Trả về chính mảng cũ nếu không có gì thay đổi.
+ */
+export function markOverdueTasks<
+  T extends { dueDate: string; status: string; overdueResumed?: boolean },
+>(tasks: T[], referenceDate?: Date): T[] {
+  let changed = false;
+  const updated = tasks.map((t) => {
+    if (
+      t.overdueResumed ||
+      t.status === "Hoàn thành" ||
+      t.status === "Chờ duyệt" ||
+      t.status === "Quá hạn"
+    ) {
+      return t;
+    }
+    if (checkIsTaskOverdue(t.dueDate, t.status, referenceDate)) {
+      changed = true;
+      return { ...t, status: "Quá hạn" };
+    }
+    return t;
+  });
+  return changed ? updated : tasks;
 }
 
 /**
