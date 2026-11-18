@@ -885,6 +885,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Accept / Reject applicants
   const acceptApplicant = async (id: string) => {
+    // Vai mẫu (không đăng nhập Firebase): cập nhật tại chỗ thay vì ghi Firestore
+    if (!auth.currentUser) {
+      const app = applicants.find((a) => a.id === id);
+      if (!app) return;
+      setApplicants((prev) => prev.map((a) => (a.id === id ? { ...a, status: "accepted" } : a)));
+      setClassGroups((prev) =>
+        prev.map((g) => {
+          if (g.id !== currentUser?.teamId) return g;
+          const memberCount = g.memberCount + 1;
+          return {
+            ...g,
+            memberCount,
+            status: memberCount >= g.maxMembers ? "Đủ thành viên" : "Đang tuyển thành viên",
+            members: [...g.members, { name: app.name, role: "Thành viên", avatar: app.avatarText }],
+          };
+        }),
+      );
+      showToast("Đã chấp nhận thành viên vào nhóm! Sĩ số nhóm đã được cập nhật.", "success");
+      return;
+    }
     try {
       // Get application details first to know which user and group
       const applicationsRef = collection(db, "applications");
@@ -931,6 +951,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const rejectApplicant = async (id: string) => {
+    // Vai mẫu (không đăng nhập Firebase): cập nhật tại chỗ thay vì ghi Firestore
+    if (!auth.currentUser) {
+      setApplicants((prev) => prev.map((a) => (a.id === id ? { ...a, status: "rejected" } : a)));
+      showToast("Đã từ chối hồ sơ ứng tuyển.", "info");
+      return;
+    }
     try {
       await applicationService.rejectApplication(id);
       showToast("Đã từ chối hồ sơ ứng tuyển.", "info");
@@ -979,11 +1005,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         appliedAt: new Date().toISOString(),
       };
 
-      await applicationService.createApplication(
-        currentUser.id,
-        targetGroupId,
-        newApp,
-      );
+      if (auth.currentUser) {
+        await applicationService.createApplication(
+          currentUser.id,
+          targetGroupId,
+          newApp,
+        );
+      } else {
+        // Vai mẫu: giữ yêu cầu tại chỗ
+        setApplicants((prev) => [
+          ...prev,
+          { ...newApp, id: `app_${Date.now()}`, status: "pending" } as CandidateApplicant,
+        ]);
+      }
       showToast(
         "Đã gửi yêu cầu tham gia nhóm thành công! Trạng thái: Chờ duyệt.",
         "success",
@@ -1061,7 +1095,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
             : 70;
 
         // 2. Tính số buổi rảnh trùng khớp
-        const groupSchedule = (g as any).schedule || {};
+        const groupSchedule = g.schedule || {};
         const { score: scheduleScore, matchedSlots, matchedSlotLabels } =
           groupService.calculateScheduleMatch(userSchedule, groupSchedule);
 
@@ -1428,6 +1462,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Move tasks on Kanban
   const moveTask = async (taskId: string, newStatus: TaskStatus) => {
+    // Vai mẫu (không đăng nhập Firebase): cập nhật tại chỗ thay vì ghi Firestore
+    if (!auth.currentUser) {
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
+      return;
+    }
     try {
       await taskService.moveTask(taskId, newStatus);
       // Realtime listener will update UI automatically
@@ -1465,6 +1504,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const updateTask = async (taskId: string, updates: Partial<KanbanTask>) => {
+    // Vai mẫu (không đăng nhập Firebase): cập nhật tại chỗ thay vì ghi Firestore
+    if (!auth.currentUser) {
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t)));
+      return;
+    }
     try {
       await taskService.updateTask(taskId, updates);
       // Realtime listener will update UI automatically

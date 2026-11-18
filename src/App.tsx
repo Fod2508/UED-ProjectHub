@@ -64,7 +64,7 @@ const AppContent: React.FC = () => {
         <Navbar onToggleMobileMenu={() => setIsMobileMenuOpen(true)} />
 
         {/* Dynamic View Container */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className={`flex-1 p-4 sm:p-6 lg:p-8 w-full mx-auto ${currentScreen === "kanban" ? "" : "max-w-7xl"}`}>
           {currentScreen === "dashboard" && <DashboardView />}
           {currentScreen === "matchmaking" && <MatchmakingView />}
           {currentScreen === "kanban" && <KanbanView />}

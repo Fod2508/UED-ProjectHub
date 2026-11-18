@@ -245,7 +245,8 @@ export const DEMO_CLASS_GROUPS: ClassGroupSummary[] = [
     memberCount: 3,
     maxMembers: 4,
     status: "Đang tuyển thành viên",
-    missingSkills: ["Mobile (Flutter/React Native)", "Tích hợp API"],
+    missingSkills: ["Backend (Python/Django)"],
+    schedule: { T2: { Sáng: true }, T4: { Tối: true }, CN: { Chiều: true } },
     kanbanProgress: 60,
     members: [
       { name: "Lê Tuấn Anh", role: "Trưởng nhóm / AI Engineer", avatar: "TA" },
@@ -266,9 +267,9 @@ export const DEMO_CLASS_GROUPS: ClassGroupSummary[] = [
     kanbanProgress: 75,
     members: [
       { name: "Nguyễn Văn A", role: "Trưởng nhóm / Frontend", avatar: "NA" },
-      { name: "Trần Thị Bích", role: "Thiết kế UI/UX & Tài liệu", avatar: "TB" },
-      { name: "Lê Văn Cúc", role: "Backend Node.js & DB", avatar: "LC" },
-      { name: "Phạm Thị Hoa", role: "Kiểm thử & QA", avatar: "TH" },
+      { name: "Trần Thu Hà", role: "Cơ sở dữ liệu & Dịch vụ nền", avatar: "TH" },
+      { name: "Đặng Minh", role: "Kiểm thử & Triển khai", avatar: "DM" },
+      { name: "Lê Văn Cúc", role: "Lập trình máy chủ & Dữ liệu", avatar: "LC" },
     ],
   },
   {
@@ -281,7 +282,8 @@ export const DEMO_CLASS_GROUPS: ClassGroupSummary[] = [
     memberCount: 3,
     maxMembers: 4,
     status: "Đang tuyển thành viên",
-    missingSkills: ["Cơ sở dữ liệu (PostgreSQL)", "Backend FastAPI"],
+    missingSkills: ["Cơ sở dữ liệu (PostgreSQL)", "Backend (Python/Django)"],
+    schedule: { T3: { Sáng: true }, T5: { Tối: true }, T6: { Chiều: true }, T4: { Sáng: true } },
     kanbanProgress: 50,
     members: [
       { name: "Đặng Quốc Bảo", role: "Trưởng nhóm / NLP Specialist", avatar: "QB" },
@@ -414,7 +416,7 @@ export const INITIAL_TASKS: KanbanTask[] = [
       "Xây dựng Schema collections cho phiên thảo luận và đánh giá chéo",
     tag: "Database",
     priority: "Thường",
-    dueDate: "14/12/2026",
+    dueDate: "12/11/2026",
     assigneeName: "Trần Thu Hà",
     assigneeAvatar: "TH",
     status: "Đã giao việc",
@@ -457,9 +459,10 @@ export const INITIAL_TASKS: KanbanTask[] = [
     tag: "Phân tích",
     priority: "Thường",
     dueDate: "16/12/2026",
-    assigneeName: "Nguyễn Văn A",
-    assigneeAvatar: "NA",
+    assigneeName: "Đặng Minh",
+    assigneeAvatar: "DM",
     status: "Chờ duyệt",
+    evidenceLink: "https://drive.google.com/uml-nhom04",
     milestoneId: "m2",
   },
   {
@@ -606,11 +609,10 @@ export const INITIAL_PEER_REVIEWS: PeerReviewEntry[] = [
     targetName: "Đặng Minh",
     targetRole: "Kiểm thử & Triển khai",
     status: "pending",
-    c1: 4,
-    c2: 4,
-    c3: 4,
-    comment:
-      "Minh hỗ trợ setup Git và CI/CD tốt, phản hồi nhanh nhẹn trong các buổi họp kỹ thuật.",
+    c1: 0,
+    c2: 0,
+    c3: 0,
+    comment: "",
   },
 ];
 

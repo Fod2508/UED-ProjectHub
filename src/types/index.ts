@@ -23,6 +23,7 @@ export interface ClassGroupSummary {
   maxMembers: number;
   status: "Đủ thành viên" | "Đang tuyển thành viên";
   missingSkills?: string[];
+  schedule?: FreeScheduleMatrix; // Lịch sinh hoạt của nhóm, dùng để tính điểm lịch rảnh
   members: { name: string; role: string; avatar: string }[];
   kanbanProgress: number; // %
 }

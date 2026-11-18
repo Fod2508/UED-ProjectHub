@@ -573,6 +573,7 @@ export const PeerReviewView: React.FC = () => {
               })}
             </div>
 
+            {c1 > 0 && (
             <div className="p-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 flex items-center gap-1.5">
               <FileText className="w-4 h-4 text-slate-500 shrink-0" />
               <span>
@@ -584,6 +585,7 @@ export const PeerReviewView: React.FC = () => {
                   : "Công việc hoàn thành tốt."}
               </span>
             </div>
+            )}
           </article>
 
           {/* CRITERION 2 */}
@@ -621,6 +623,7 @@ export const PeerReviewView: React.FC = () => {
               })}
             </div>
 
+            {c2 > 0 && (
             <div className="p-2.5 rounded-xl bg-white border border-slate-200 text-xs text-emerald-700 flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>
@@ -630,6 +633,7 @@ export const PeerReviewView: React.FC = () => {
                 Tốt (Mã nguồn được cấu trúc sạch sẽ, tài liệu kết nối rõ ràng).
               </span>
             </div>
+            )}
           </article>
 
           {/* CRITERION 3 */}
@@ -667,6 +671,7 @@ export const PeerReviewView: React.FC = () => {
               })}
             </div>
 
+            {c3 > 0 && (
             <div className="p-2.5 rounded-xl bg-white border border-slate-200 text-xs text-emerald-700 flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>
@@ -676,6 +681,7 @@ export const PeerReviewView: React.FC = () => {
                 Tốt (Nhiệt tình trao đổi trong các buổi họp kỹ thuật).
               </span>
             </div>
+            )}
           </article>
 
           {/* DETAILED COMMENT SECTION */}

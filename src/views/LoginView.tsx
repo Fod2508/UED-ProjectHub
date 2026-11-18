@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   Users,
   Copy,
-  Sparkles,
   ArrowRight,
   UserPlus,
 } from "lucide-react";
@@ -536,9 +535,9 @@ export const LoginView: React.FC = () => {
                 <div className="p-3.5 sm:p-4 bg-gradient-to-br from-blue-50/90 via-indigo-50/60 to-purple-50/60 border border-blue-200/90 rounded-2xl">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
                     <div className="flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-blue-600" />
+                      <Users className="w-4 h-4 text-blue-600" />
                       <span className="font-bold text-xs sm:text-sm text-slate-900">
-                        10 Sinh viên mẫu CHƯA CÓ NHÓM (Dùng test ghép & tạo nhóm)
+                        Tài khoản dùng thử – sinh viên chưa có nhóm
                       </span>
                     </div>
 
@@ -546,17 +545,15 @@ export const LoginView: React.FC = () => {
                       type="button"
                       onClick={handleCopyAllAccounts}
                       className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-white border border-blue-200 hover:bg-blue-50 px-2.5 py-1 rounded-md shadow-2xs transition cursor-pointer self-start sm:self-auto"
-                      title="Sao chép toàn bộ danh sách để gửi bạn bè cùng test"
+                      title="Sao chép danh sách tài khoản"
                     >
                       <Copy className="w-3 h-3 text-blue-600" />
-                      <span>Sao chép toàn bộ</span>
+                      <span>Sao chép</span>
                     </button>
                   </div>
 
                   <p className="text-[11px] text-slate-600 mb-3 leading-relaxed">
-                    Mỗi tài khoản có kỹ năng chuyên môn khác nhau, mật khẩu chung là{" "}
-                    <strong className="text-blue-700 font-mono">123456</strong>.
-                    Bấm <strong>"Vào Test"</strong> để đăng nhập ngay và trải nghiệm màn hình Tìm nhóm:
+                    Mật khẩu chung: <strong className="text-blue-700 font-mono">123456</strong>
                   </p>
 
                   {/* Scrollable list of 10 students */}
@@ -611,7 +608,7 @@ export const LoginView: React.FC = () => {
                             onClick={() => loginAsCustomUser(student)}
                             className="inline-flex items-center gap-1 text-[11px] font-semibold bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-lg shadow-2xs transition cursor-pointer"
                           >
-                            <span>Vào Test</span>
+                            <span>Vào thử</span>
                             <ArrowRight className="w-3 h-3" />
                           </button>
                         </div>
@@ -622,7 +619,7 @@ export const LoginView: React.FC = () => {
                   {/* Toggle tài khoản đã có nhóm */}
                   <div className="mt-2.5 pt-2 border-t border-blue-100 flex items-center justify-between text-[11px]">
                     <span className="text-slate-500">
-                      Cần test Bảng tiến độ hoặc Đánh giá chéo?
+                      Tài khoản đã có nhóm:
                     </span>
                     <button
                       type="button"
