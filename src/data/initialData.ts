@@ -1,4 +1,5 @@
 import {
+  CourseSyllabus,
   UserProfile,
   CandidateApplicant,
   KanbanTask,
@@ -522,6 +523,15 @@ export const INITIAL_TASKS: KanbanTask[] = [
     milestoneId: "m2",
   },
 ];
+
+// Đề cương mẫu: các cột mốc mẫu thuộc học phần này và đã được công bố
+export const DEMO_COURSE: CourseSyllabus = {
+  code: "course_2024_2025",
+  name: "Đồ án Chuyên ngành",
+  semester: "Học kỳ 1 (2026 - 2027)",
+  description: "Đồ án nhóm 4 sinh viên, đánh giá theo 4 cột mốc và đánh giá chéo.",
+  published: true,
+};
 
 export const INITIAL_MILESTONES: Milestone[] = [
   {

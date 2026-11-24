@@ -32,6 +32,8 @@ export const MilestonesView: React.FC = () => {
     setIsAddMilestoneModalOpen,
     publishMilestones,
     isMilestoneLocked,
+    course,
+    createCourse,
     showToast,
     setCurrentScreen,
     currentRole,
@@ -41,6 +43,12 @@ export const MilestonesView: React.FC = () => {
   } = useApp();
 
   const { isValid, totalWeight } = validateMilestonesWeight(milestones);
+  const [courseForm, setCourseForm] = useState({
+    code: "",
+    name: "",
+    semester: "",
+    description: "",
+  });
   const [editingMilestoneId, setEditingMilestoneId] = useState<string | null>(
     null,
   );
@@ -241,6 +249,13 @@ export const MilestonesView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-800">
+                  {courseMilestones.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-8 px-6 text-center text-slate-500">
+                        Giảng viên chưa công bố cột mốc của học phần.
+                      </td>
+                    </tr>
+                  )}
                   {courseMilestones.map((m) => {
                     const isSprintActive = m.status === "Đang mở";
                     const mySubmission = milestoneSubmissions.find(
@@ -594,6 +609,69 @@ export const MilestonesView: React.FC = () => {
             </div>
           )}
 
+          {/* Đề cương học phần (UC11): phải có trước khi thêm cột mốc */}
+          {course ? (
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs px-6 py-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs sm:text-sm text-slate-600">
+              <span>
+                Học phần: <strong className="text-slate-900">{course.name}</strong> ({course.code})
+              </span>
+              {course.semester && <span>{course.semester}</span>}
+              <span className={course.published ? "text-emerald-700 font-semibold" : "text-amber-700 font-semibold"}>
+                {course.published ? "Đã công bố cột mốc" : "Chưa công bố cột mốc"}
+              </span>
+            </div>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                createCourse(courseForm);
+              }}
+              className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 space-y-4"
+            >
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-slate-900">Khởi tạo đề cương học phần</h2>
+                <p className="text-xs text-slate-500">Cần khởi tạo đề cương trước khi thêm cột mốc nộp bài.</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <input
+                  required
+                  value={courseForm.code}
+                  onChange={(e) => setCourseForm({ ...courseForm, code: e.target.value })}
+                  placeholder="Mã học phần *"
+                  className="text-xs sm:text-sm p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
+                />
+                <input
+                  required
+                  value={courseForm.name}
+                  onChange={(e) => setCourseForm({ ...courseForm, name: e.target.value })}
+                  placeholder="Tên học phần *"
+                  className="text-xs sm:text-sm p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
+                />
+                <input
+                  value={courseForm.semester}
+                  onChange={(e) => setCourseForm({ ...courseForm, semester: e.target.value })}
+                  placeholder="Học kỳ"
+                  className="text-xs sm:text-sm p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
+                />
+              </div>
+              <textarea
+                rows={2}
+                value={courseForm.description}
+                onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })}
+                placeholder="Mô tả học phần"
+                className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
+              />
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition cursor-pointer"
+                >
+                  Khởi tạo đề cương
+                </button>
+              </div>
+            </form>
+          )}
+
           {/* 2. Main Milestones Table Container */}
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
             {/* Table Title Bar */}
@@ -795,7 +873,9 @@ export const MilestonesView: React.FC = () => {
             {/* Add milestone */}
             <button
               onClick={() => setIsAddMilestoneModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-slate-300 hover:border-blue-500 text-slate-600 hover:text-blue-600 bg-white hover:bg-blue-50/50 transition font-semibold text-xs sm:text-sm cursor-pointer"
+              disabled={!course}
+              title={course ? undefined : "Cần khởi tạo đề cương học phần trước"}
+              className="disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-slate-300 hover:border-blue-500 text-slate-600 hover:text-blue-600 bg-white hover:bg-blue-50/50 transition font-semibold text-xs sm:text-sm cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Thêm cột mốc</span>

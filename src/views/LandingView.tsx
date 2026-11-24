@@ -61,7 +61,7 @@ export const LandingView: React.FC = () => {
           {/* Right items */}
           <div className="flex items-center gap-3 sm:gap-5">
             <button
-              onClick={() => setCurrentScreen("dashboard")}
+              onClick={() => setCurrentScreen(currentUser ? "dashboard" : "login")}
               className="text-xs sm:text-sm font-medium text-slate-600 hover:text-blue-600 transition flex items-center gap-1.5"
             >
               <HelpCircle className="w-4 h-4 text-slate-400" />

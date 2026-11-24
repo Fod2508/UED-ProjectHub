@@ -157,6 +157,28 @@ service cloud.firestore {
     }
     
     // ============================================
+    // COURSES (đề cương học phần)
+    // ============================================
+
+    match /courses/{courseId} {
+      allow read: if isAuthenticated();
+      allow write: if isLecturer();
+    }
+
+    // ============================================
+    // CONTRIBUTION REPORTS (điểm chính thức)
+    // ============================================
+
+    match /contributionReports/{reportId} {
+      allow read: if isAuthenticated() && (
+        isSameTeam(resource.data.groupId) || isLecturer()
+      );
+      allow create: if isLecturer();
+      // Đã phê duyệt thì khóa: không sửa, không xóa
+      allow update, delete: if isLecturer() && resource.data.status != 'Đã phê duyệt';
+    }
+
+    // ============================================
     // ADDITIONAL SECURITY VALIDATIONS
     // ============================================
     

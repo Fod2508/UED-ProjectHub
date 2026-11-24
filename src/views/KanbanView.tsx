@@ -633,17 +633,26 @@ export const KanbanView: React.FC = () => {
                         >
                           {task.tag}
                         </span>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            task.status === "Hoàn thành"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : task.status === "Đang thực hiện"
-                              ? "bg-blue-50 text-blue-700"
-                              : "bg-slate-200 text-slate-700"
-                          }`}
-                        >
-                          {task.status}
-                        </span>
+                        {task.status !== "Quá hạn" && (
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              task.status === "Hoàn thành"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : task.status === "Đang thực hiện"
+                                ? "bg-blue-50 text-blue-700"
+                                : "bg-slate-200 text-slate-700"
+                            }`}
+                          >
+                            {task.status}
+                          </span>
+                        )}
+                        {(task.status === "Quá hạn" ||
+                          checkIsTaskOverdue(task.dueDate, task.status)) && (
+                          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-bold bg-rose-50 text-rose-700">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            Quá hạn
+                          </span>
+                        )}
                       </div>
                       <h4 className="text-sm font-bold text-slate-900">
                         {task.title}

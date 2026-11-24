@@ -114,6 +114,10 @@ export const PeerReviewView: React.FC = () => {
   };
 
   const handleSubmitAndNext = () => {
+    if (!c1 || !c2 || !c3) {
+      showToast("Vui lòng chọn điểm cho cả 3 tiêu chí trước khi gửi.", "warning");
+      return;
+    }
     submitAndNextPeerReview(activeEvaluatingTargetId, {
       c1,
       c2,

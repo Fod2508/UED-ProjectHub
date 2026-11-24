@@ -156,6 +156,11 @@ export const MatchmakingView: React.FC = () => {
       return;
     }
 
+    if (freeSlotsCount === 0) {
+      showToast("Hãy chọn ít nhất một buổi rảnh trước khi tìm nhóm.", "warning");
+      return;
+    }
+
     setHasSearched(true);
     const results = await findMatchingGroups(selectedSkills, scheduleMatrix);
     setMatchingGroups(results);

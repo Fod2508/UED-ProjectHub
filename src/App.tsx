@@ -14,7 +14,7 @@ import { PeerReviewView } from "./views/PeerReviewView.tsx";
 import { ContributionReportView } from "./views/ContributionReportView.tsx";
 
 const AppContent: React.FC = () => {
-  const { currentScreen, authLoading } = useApp();
+  const { currentScreen, authLoading, currentUser } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Show loading spinner during auth initialization
@@ -39,8 +39,8 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // If on login screen, render login view
-  if (currentScreen === "login") {
+  // Login screen, or any workspace screen while signed out
+  if (currentScreen === "login" || !currentUser) {
     return (
       <div className="min-h-screen">
         <LoginView />

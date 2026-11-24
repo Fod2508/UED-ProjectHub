@@ -157,6 +157,15 @@ export interface MemberContributionData {
   warningReason?: string;
 }
 
+// Đề cương học phần do Giảng viên khởi tạo (UC11)
+export interface CourseSyllabus {
+  code: string; // Mã học phần, dùng làm courseId của cột mốc
+  name: string;
+  semester: string;
+  description: string;
+  published?: boolean; // Đã công bố cột mốc cho sinh viên (UC13)
+}
+
 export interface GroupReportData {
   groupId: string;
   groupName: string;
@@ -175,6 +184,9 @@ export interface GroupReportData {
     | "Yêu cầu đánh giá lại";
   lecturerInstruction: string;
   members: MemberContributionData[];
+  // Điểm đóng góp chính thức, ghi khi Giảng viên phê duyệt (UC30, UC31)
+  officialScores?: { memberId: string; name: string; contributionScore: number }[];
+  approvedAt?: string;
 }
 
 export type NotificationType =

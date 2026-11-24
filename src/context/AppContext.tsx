@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "../config/firebase";
-import { doc, getDoc, collection } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection } from "firebase/firestore";
 import {
   taskService,
   milestoneService,
@@ -26,6 +26,7 @@ import {
   DemoPersona,
   ClassGroupSummary,
   MilestoneSubmission,
+  CourseSyllabus,
 } from "../types/index.ts";
 import {
   INITIAL_STUDENT_USER,
@@ -35,6 +36,7 @@ import {
   INITIAL_APPLICANTS,
   INITIAL_TASKS,
   INITIAL_MILESTONES,
+  DEMO_COURSE,
   INITIAL_PEER_REVIEWS,
   INITIAL_GROUP_REPORT,
   INITIAL_NOTIFICATIONS,
@@ -124,6 +126,8 @@ interface AppContextType {
   updateMilestone: (id: string, updates: Partial<Milestone>) => void;
   publishMilestones: () => { success: boolean; message: string };
   isMilestoneLocked: boolean;
+  course: CourseSyllabus | null;
+  createCourse: (input: Omit<CourseSyllabus, "published">) => boolean;
 
   // Peer review (Giai đoạn 3)
   peerReviews: PeerReviewEntry[];
@@ -210,6 +214,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [authLoading, setAuthLoading] = useState(true);
   const [currentRole, setCurrentRole] = useState<UserRole>("student");
   const [demoPersona, setDemoPersona] = useState<DemoPersona>("leader");
+  // Đề cương học phần (UC11). Vai mẫu lưu tại trình duyệt; tài khoản thật lưu Firestore courses/active
+  const [course, setCourse] = useState<CourseSyllabus | null>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY + "_course");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [classGroups, setClassGroups] = useState<ClassGroupSummary[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY + "_class_groups");
@@ -349,8 +362,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     // Vai mẫu không đăng nhập Firebase: giữ dữ liệu mẫu, không gọi Firestore
     if (!auth.currentUser) return;
 
-    // For demo, we use a fixed courseId
-    const courseId = "course_2024_2025";
+    // Cột mốc thuộc học phần đã khởi tạo đề cương
+    if (!course) {
+      setMilestones([]);
+      return;
+    }
+    const courseId = course.code;
 
     console.log("🔄 Subscribing to milestones for course:", courseId);
 
@@ -370,7 +387,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log("🔌 Unsubscribing from milestones");
       unsubscribe();
     };
-  }, [currentUser]); // Re-run when currentUser changes (login/logout)
+  }, [currentUser, course?.code]); // Re-run when currentUser changes (login/logout)
 
   // Load applications from Firestore with realtime sync
   useEffect(() => {
@@ -530,7 +547,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   const [allowInternalMilestone, setAllowInternalMilestone] = useState(true);
-  const [isMilestoneLocked, setIsMilestoneLocked] = useState(false);
 
   const [peerReviews, setPeerReviews] = useState<PeerReviewEntry[]>([]);
 
@@ -558,6 +574,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       return INITIAL_GROUP_REPORT;
     }
   });
+
+
+  const saveCourse = (next: CourseSyllabus) => {
+    setCourse(next);
+    try {
+      localStorage.setItem(STORAGE_KEY + "_course", JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    if (auth.currentUser) {
+      setDoc(doc(db, "courses", "active"), next).catch((error) => {
+        console.error("Error saving course:", error);
+        showToast("Không lưu được đề cương lên máy chủ.", "error");
+      });
+    }
+  };
+
+  // Tài khoản thật: đề cương lấy từ Firestore
+  useEffect(() => {
+    if (!currentUser || !auth.currentUser) return;
+    getDoc(doc(db, "courses", "active"))
+      .then((snap) => setCourse(snap.exists() ? (snap.data() as CourseSyllabus) : null))
+      .catch((error) => console.warn("Could not load course:", error));
+  }, [currentUser?.id]);
+
+  const createCourse = (input: Omit<CourseSyllabus, "published">): boolean => {
+    if (currentRole !== "lecturer") {
+      showToast("Chỉ Giảng viên mới được khởi tạo đề cương học phần.", "warning");
+      return false;
+    }
+    if (!input.code.trim() || !input.name.trim()) {
+      showToast("Vui lòng nhập mã và tên học phần.", "warning");
+      return false;
+    }
+    saveCourse({
+      code: input.code.trim(),
+      name: input.name.trim(),
+      semester: input.semester.trim(),
+      description: input.description.trim(),
+      published: false,
+    });
+    showToast(`Đã khởi tạo đề cương học phần ${input.code.trim()}.`, "success");
+    return true;
+  };
+
+  const isReportApproved = groupReport.status === "Đã phê duyệt";
 
   // Modals
   const [isApplicantModalOpen, setIsApplicantModalOpen] = useState(false);
@@ -736,6 +798,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     if (applicants.length === 0) setApplicants(INITIAL_APPLICANTS);
     if (peerReviews.length === 0) setPeerReviews(INITIAL_PEER_REVIEWS);
     if (classGroups.length === 0) setClassGroups(DEMO_CLASS_GROUPS);
+    if (!course) saveCourse(DEMO_COURSE);
 
     if (persona === "lecturer") {
       setCurrentRole("lecturer");
@@ -1482,6 +1545,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
+    // Vai mẫu (không đăng nhập Firebase): thêm tại chỗ thay vì ghi Firestore
+    if (!auth.currentUser) {
+      const code = `#TSK-${String(tasks.length + 1).padStart(2, "0")}`;
+      setTasks((prev) => [...prev, { ...taskData, id: `task_${Date.now()}`, code }]);
+      showToast(`Đã tạo công việc mới: ${taskData.title} (${code})`, "success");
+      return;
+    }
+
     try {
       const { id, code } = await taskService.createTask(
         taskData,
@@ -1536,8 +1607,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
+    if (!course) {
+      showToast("Cần khởi tạo đề cương học phần trước khi thêm cột mốc.", "warning");
+      return;
+    }
+
     try {
-      const courseId = "course_2024_2025";
+      const courseId = course.code;
       await milestoneService.createMilestone(item, courseId, currentUser.id);
       showToast(
         item.type === "internal"
@@ -1574,6 +1650,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const publishMilestones = () => {
+    if (!course) {
+      showToast("Cần khởi tạo đề cương học phần trước khi công bố.", "warning");
+      return { success: false, message: "Chưa có đề cương học phần" };
+    }
+    if (course.published) {
+      showToast("Các cột mốc của học phần đã được công bố.", "info");
+      return { success: false, message: "Đã công bố" };
+    }
     const validation = validateMilestonesWeight(milestones);
     if (!validation.isValid) {
       showToast(
@@ -1586,7 +1670,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       };
     }
 
-    setIsMilestoneLocked(true);
+    saveCourse({ ...course, published: true });
+
+    // Cột mốc đầu tiên chưa kết thúc (hạn sớm nhất) chuyển sang "Đang mở"
+    const dueTime = (d: string) => {
+      const [dd, mm, yy] = d.split("/").map(Number);
+      return new Date(yy, mm - 1, dd).getTime() || 0;
+    };
+    const first = milestones
+      .filter((m) => m.type !== "internal" && m.status !== "Đã hoàn thành" && m.status !== "Đã khóa")
+      .sort((a, b) => dueTime(a.dueDate) - dueTime(b.dueDate))[0];
+    if (first && first.status === "Chưa mở") {
+      const openLocally = () =>
+        setMilestones((prev) =>
+          prev.map((m) => (m.id === first.id ? { ...m, status: "Đang mở" } : m)),
+        );
+      if (auth.currentUser) {
+        milestoneService.updateMilestone(first.id, { status: "Đang mở" }).catch(openLocally);
+      } else {
+        openLocally();
+      }
+    }
     showToast(
       "🚀 Đã công bố Cột mốc & Mở khóa Bảng tiến độ công việc thành công!",
       "success",
@@ -1610,6 +1714,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     targetId: string,
     updates: Partial<PeerReviewEntry>,
   ) => {
+    if (isReportApproved) {
+      showToast("Điểm đóng góp đã được Giảng viên phê duyệt và khóa, không thể thay đổi.", "warning");
+      return;
+    }
     if (!currentUser?.teamId) {
       showToast("Bạn chưa thuộc nhóm nào.", "warning");
       return;
@@ -1643,6 +1751,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     targetId: string,
     updates: Partial<PeerReviewEntry>,
   ) => {
+    if (isReportApproved) {
+      showToast("Điểm đóng góp đã được Giảng viên phê duyệt và khóa, không thể thay đổi.", "warning");
+      return;
+    }
     if (!currentUser?.teamId) {
       showToast("Bạn chưa thuộc nhóm nào.", "warning");
       return;
@@ -1722,10 +1834,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const approveAllScores = () => {
+    if (isReportApproved) {
+      showToast("Điểm đóng góp đã được Giảng viên phê duyệt và khóa, không thể thay đổi.", "info");
+      return;
+    }
+    const officialScores = groupReport.members.map((m) => ({
+      memberId: m.id,
+      name: m.name,
+      contributionScore: m.contributionScore,
+    }));
+    const approvedAt = new Date().toISOString();
     setGroupReport((prev) => ({
       ...prev,
       status: "Đã phê duyệt",
+      officialScores,
+      approvedAt,
     }));
+    if (auth.currentUser) {
+      setDoc(doc(db, "contributionReports", `${groupReport.groupId}_${groupReport.milestoneId}`), {
+        groupId: groupReport.groupId,
+        milestoneId: groupReport.milestoneId,
+        status: "Đã phê duyệt",
+        officialScores,
+        approvedAt,
+        approvedBy: currentUser?.id || "",
+      }).catch((error) => {
+        console.error("Error saving official scores:", error);
+        showToast("Không lưu được điểm chính thức lên máy chủ.", "error");
+      });
+    }
     showToast(
       "Đã phê duyệt và khóa toàn bộ điểm số Cột mốc 2 cho Nhóm 04.",
       "success",
@@ -1740,6 +1877,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const requestExplanation = (instruction: string) => {
+    if (isReportApproved) {
+      showToast("Điểm đóng góp đã được Giảng viên phê duyệt và khóa, không thể thay đổi.", "warning");
+      return;
+    }
     setGroupReport((prev) => ({
       ...prev,
       status: "Yêu cầu giải trình",
@@ -1759,6 +1900,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const requestReEvaluation = (instruction: string) => {
+    if (isReportApproved) {
+      showToast("Điểm đóng góp đã được Giảng viên phê duyệt và khóa, không thể thay đổi.", "warning");
+      return;
+    }
     setGroupReport((prev) => ({
       ...prev,
       status: "Yêu cầu đánh giá lại",
@@ -1908,7 +2053,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         deleteTask,
         isNewTaskModalOpen,
         setIsNewTaskModalOpen,
-        milestones,
+        // Sinh viên chỉ thấy cột mốc học phần sau khi Giảng viên công bố
+        milestones:
+          currentRole === "lecturer" || course?.published
+            ? milestones
+            : milestones.filter((m) => m.type === "internal"),
         milestoneSubmissions,
         submitMilestoneProgress,
         reviewMilestoneSubmission,
@@ -1919,7 +2068,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         addMilestone,
         updateMilestone,
         publishMilestones,
-        isMilestoneLocked,
+        isMilestoneLocked: Boolean(course?.published),
+        course,
+        createCourse,
         peerReviews,
         activeEvaluatingTargetId,
         setActiveEvaluatingTargetId,

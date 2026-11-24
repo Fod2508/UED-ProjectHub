@@ -3,8 +3,6 @@ import { useApp } from "../context/AppContext.tsx";
 import { groupService } from "../services/groupService.ts";
 import { X, Plus, Calendar, Tag, User } from "lucide-react";
 
-const UNASSIGNED = "Chưa giao";
-
 export const NewTaskModal: React.FC = () => {
   const {
     isNewTaskModalOpen,
@@ -13,6 +11,7 @@ export const NewTaskModal: React.FC = () => {
     milestones,
     currentUser,
     showToast,
+    classGroups,
   } = useApp();
 
   // Find relevant milestones (course milestones + internal ones belonging to this team)
@@ -36,10 +35,8 @@ export const NewTaskModal: React.FC = () => {
   const [dueDate, setDueDate] = useState("2026-12-24"); // yyyy-mm-dd for native date input
   const [milestoneId, setMilestoneId] = useState(activeMilestone?.id || "m2");
 
-  const [assignee, setAssignee] = useState({
-    name: currentUser?.name || "Nguyễn Văn A",
-    avatar: currentUser?.avatarText || "NA",
-  });
+  // Bắt buộc chọn người phụ trách khi tạo công việc (UC15, UC16)
+  const [assignee, setAssignee] = useState({ name: "", avatar: "" });
 
   // Thành viên thật của nhóm (UC16: gán người phụ trách)
   const [groupMembers, setGroupMembers] = useState<
@@ -71,6 +68,11 @@ export const NewTaskModal: React.FC = () => {
       return;
     }
 
+    if (!assignee.name) {
+      showToast("Vui lòng chọn người phụ trách cho công việc.", "warning");
+      return;
+    }
+
     // Convert yyyy-mm-dd (native date input) to dd/mm/yyyy used throughout the app
     const [y, m, d] = dueDate.split("-");
     const formattedDueDate = dueDate ? `${d}/${m}/${y}` : "";
@@ -80,8 +82,7 @@ export const NewTaskModal: React.FC = () => {
       description: description.trim(),
       tag,
       priority,
-      // Chưa có người phụ trách: Mới tạo; đã gán người: Đã giao việc
-      status: assignee.name === UNASSIGNED ? "Mới tạo" : "Đã giao việc",
+      status: "Đã giao việc",
       dueDate: formattedDueDate,
       assigneeName: assignee.name,
       assigneeAvatar: assignee.avatar,
@@ -98,8 +99,10 @@ export const NewTaskModal: React.FC = () => {
       name: currentUser?.name || "Nguyễn Văn A",
       avatar: currentUser?.avatarText || "NA",
     },
-    ...groupMembers,
-    { name: UNASSIGNED, avatar: "?" },
+    // Firestore chưa trả về thành viên (vai mẫu): lấy từ danh sách nhóm trong lớp
+    ...(groupMembers.length > 0
+      ? groupMembers
+      : classGroups.find((g) => g.id === currentUser?.teamId)?.members ?? []),
   ];
 
   // Unique members list
@@ -218,9 +221,10 @@ export const NewTaskModal: React.FC = () => {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">
-                Người phụ trách
+                Người phụ trách <span className="text-rose-500">*</span>
               </label>
               <select
+                required
                 value={assignee.name}
                 onChange={(e) => {
                   const m = membersList.find(
@@ -230,6 +234,9 @@ export const NewTaskModal: React.FC = () => {
                 }}
                 className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none bg-white"
               >
+                <option value="" disabled>
+                  Chọn người phụ trách
+                </option>
                 {membersList.map((m) => (
                   <option key={m.name} value={m.name}>
                     {m.name}
