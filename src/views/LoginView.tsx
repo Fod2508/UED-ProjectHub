@@ -11,7 +11,6 @@ import {
   GraduationCap,
   AlertCircle,
   ShieldCheck,
-  Info,
   CheckCircle2,
   Users,
   Copy,
@@ -381,14 +380,6 @@ export const LoginView: React.FC = () => {
                 {isLoading ? "Đang xác thực..." : "Đăng nhập Cán bộ Giảng viên"}
               </button>
             </form>
-
-            <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-xs text-slate-600 leading-relaxed flex items-start gap-2">
-              <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-              <span>
-                Tài khoản Giảng viên do Khoa CNTT cấp nội bộ theo mã cán bộ nhằm
-                bảo mật công tác quản lý đề cương và thẩm định đồ án.
-              </span>
-            </div>
           </div>
         )}
 
