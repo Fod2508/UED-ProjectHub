@@ -105,7 +105,7 @@ export const PeerReviewView: React.FC = () => {
   };
 
   const handleSaveDraft = () => {
-    savePeerReviewDraft(activeEvaluatingTargetId, {
+    savePeerReviewDraft(currentEvaluation.targetId, {
       c1,
       c2,
       c3,
@@ -118,7 +118,7 @@ export const PeerReviewView: React.FC = () => {
       showToast("Vui lòng chọn điểm cho cả 3 tiêu chí trước khi gửi.", "warning");
       return;
     }
-    submitAndNextPeerReview(activeEvaluatingTargetId, {
+    submitAndNextPeerReview(currentEvaluation.targetId, {
       c1,
       c2,
       c3,

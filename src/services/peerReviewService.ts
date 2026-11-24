@@ -49,6 +49,8 @@ export const peerReviewService = {
       c3: number;
       comment: string;
       status: "done" | "evaluating" | "pending";
+      targetName?: string;
+      targetRole?: string;
     },
   ): Promise<string> {
     const reviewsRef = collection(db, "peerReviews");
@@ -213,14 +215,15 @@ export const peerReviewService = {
   async initializePeerReviewSession(
     groupId: string,
     milestoneId: string,
-    memberIds: string[],
+    members: { id: string; name: string; role: string }[],
   ): Promise<{ success: boolean; message: string; reviewCount: number }> {
     try {
       let reviewCount = 0;
 
       // Each member reviews all other members
-      for (const reviewerId of memberIds) {
-        for (const targetId of memberIds) {
+      for (const { id: reviewerId } of members) {
+        for (const target of members) {
+          const targetId = target.id;
           // Skip self-review
           if (reviewerId === targetId) continue;
 
@@ -236,6 +239,8 @@ export const peerReviewService = {
               c3: 0,
               comment: "",
               status: "pending",
+              targetName: target.name,
+              targetRole: target.role,
             },
           );
 

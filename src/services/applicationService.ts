@@ -43,7 +43,6 @@ export const applicationService = {
     const q = query(
       applicationsRef,
       where("targetGroupId", "==", groupId),
-      orderBy("appliedAt", "desc"),
     );
 
     const snapshot = await getDocs(q);
@@ -92,7 +91,6 @@ export const applicationService = {
     const q = query(
       applicationsRef,
       where("targetGroupId", "==", groupId),
-      orderBy("appliedAt", "desc"),
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {

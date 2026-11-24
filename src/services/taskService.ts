@@ -51,7 +51,6 @@ export const taskService = {
     const q = query(
       tasksRef,
       where("groupId", "==", groupId),
-      orderBy("createdAt", "desc"),
     );
 
     const snapshot = await getDocs(q);
@@ -101,7 +100,6 @@ export const taskService = {
     const q = query(
       tasksRef,
       where("groupId", "==", groupId),
-      orderBy("createdAt", "desc"),
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {

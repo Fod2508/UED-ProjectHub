@@ -45,7 +45,13 @@ service cloud.firestore {
       
       // Users can only update their own profile, lecturers can update any
       allow create: if isAuthenticated();
-      allow update: if isOwner(userId) || isLecturer();
+      // Trưởng nhóm chấp nhận thành viên: chỉ được gán đúng nhóm của mình, không cấp quyền trưởng nhóm
+      allow update: if isOwner(userId) || isLecturer() || (
+        isGroupLeader() &&
+        request.resource.data.teamId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId &&
+        request.resource.data.isGroupLeader == false &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['id', 'teamId', 'teamName', 'isGroupLeader'])
+      );
       allow delete: if isLecturer(); // Only lecturers can delete users
     }
     
@@ -156,6 +162,43 @@ service cloud.firestore {
       allow delete: if isLecturer();
     }
     
+    // ============================================
+    // GROUPS (nhóm đồ án)
+    // ============================================
+
+    match /groups/{groupId} {
+      // Mọi người đã đăng nhập xem được danh sách nhóm (tìm nhóm, giảng viên theo dõi)
+      allow read: if isAuthenticated();
+      // Người tạo nhóm là trưởng nhóm
+      allow create: if isAuthenticated() &&
+                       request.resource.data.createdBy == request.auth.uid;
+      // Trưởng nhóm (thêm thành viên), thành viên (rời nhóm) hoặc giảng viên
+      allow update: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid ||
+        request.auth.uid in resource.data.memberIds ||
+        isLecturer()
+      );
+      allow delete: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid || isLecturer()
+      );
+    }
+
+    // ============================================
+    // MILESTONE SUBMISSIONS (bài nộp cột mốc)
+    // ============================================
+
+    match /milestoneSubmissions/{submissionId} {
+      allow read: if isAuthenticated() && (
+        isSameTeam(resource.data.groupId) || isLecturer()
+      );
+      // Trưởng nhóm nộp / nộp lại; Giảng viên kiểm duyệt
+      allow create, update: if isAuthenticated() && (
+        (isSameTeam(request.resource.data.groupId) && isGroupLeader() &&
+         request.resource.data.status == 'Đã nộp') ||
+        isLecturer()
+      );
+    }
+
     // ============================================
     // COURSES (đề cương học phần)
     // ============================================

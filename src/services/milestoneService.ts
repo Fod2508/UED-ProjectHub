@@ -52,7 +52,6 @@ export const milestoneService = {
     const q = query(
       milestonesRef,
       where("courseId", "==", courseId),
-      orderBy("createdAt", "asc"),
     );
 
     const snapshot = await getDocs(q);
@@ -99,13 +98,13 @@ export const milestoneService = {
     const q = query(
       milestonesRef,
       where("courseId", "==", courseId),
-      orderBy("createdAt", "asc"),
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const milestones = snapshot.docs.map((doc) =>
-        normalizeMilestone({ id: doc.id, ...doc.data() }),
-      );
+      const milestones = snapshot.docs
+        .map((doc) => ({ doc, data: doc.data() as any }))
+        .sort((a, b) => (a.data.createdAt?.toMillis?.() ?? 0) - (b.data.createdAt?.toMillis?.() ?? 0))
+        .map(({ doc, data }) => normalizeMilestone({ id: doc.id, ...data }));
 
       callback(milestones);
     });

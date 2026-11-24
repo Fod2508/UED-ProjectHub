@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "../config/firebase";
-import { doc, getDoc, setDoc, collection } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection, onSnapshot, query, where } from "firebase/firestore";
 import {
   taskService,
   milestoneService,
@@ -214,6 +214,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [authLoading, setAuthLoading] = useState(true);
   const [currentRole, setCurrentRole] = useState<UserRole>("student");
   const [demoPersona, setDemoPersona] = useState<DemoPersona>("leader");
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  // Phiên đánh giá chéo gắn với cột mốc học phần vừa khóa gần nhất (vai mẫu: m2)
+  const peerReviewMilestoneId =
+    milestones
+      .filter((m) => m.type !== "internal" && m.status === "Đã khóa")
+      .map((m) => m.id)
+      .pop() ?? "m2";
   // Đề cương học phần (UC11). Vai mẫu lưu tại trình duyệt; tài khoản thật lưu Firestore courses/active
   const [course, setCourse] = useState<CourseSyllabus | null>(() => {
     try {
@@ -375,11 +382,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       courseId,
       (updatedMilestones) => {
         console.log("🎯 Milestones updated:", updatedMilestones.length);
-        if (updatedMilestones.length === 0) {
-          setMilestones(INITIAL_MILESTONES);
-        } else {
-          setMilestones(updatedMilestones);
-        }
+        setMilestones(updatedMilestones);
       },
     );
 
@@ -430,8 +433,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     // Vai mẫu không đăng nhập Firebase: giữ dữ liệu mẫu, không gọi Firestore
     if (!auth.currentUser) return;
 
-    // For demo, we'll use a fixed milestone "m2" (Cột mốc 2)
-    const milestoneId = "m2";
+    const milestoneId = peerReviewMilestoneId;
 
     console.log(
       "🔄 Subscribing to peer reviews for group:",
@@ -455,12 +457,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log("🔌 Unsubscribing from peer reviews");
       unsubscribe();
     };
-  }, [currentUser]); // Re-run when currentUser changes (login/logout)
+  }, [currentUser, peerReviewMilestoneId]);
 
   // Sync groups from Firestore so any student-created group appears for all (including Lecturer)
   useEffect(() => {
+    if (!auth.currentUser) return;
     const unsubscribe = groupService.subscribeToGroups((firestoreGroups) => {
-      if (firestoreGroups && firestoreGroups.length > 0) {
+      if (firestoreGroups) {
         const mapped: ClassGroupSummary[] = firestoreGroups.map((g) => ({
           id: g.id,
           name: g.name,
@@ -486,25 +489,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           kanbanProgress: 0,
         }));
 
-        setClassGroups((prev) => {
-          const merged = [...mapped];
-          for (const item of prev) {
-            if (!merged.some((m) => m.id === item.id)) {
-              merged.push(item);
-            }
-          }
-          try {
-            localStorage.setItem(STORAGE_KEY + "_class_groups", JSON.stringify(merged));
-          } catch (e) {
-            console.warn("Storage write error", e);
-          }
-          return merged;
-        });
+        // Tài khoản thật: chỉ nhóm thật trên Firestore, không lẫn nhóm mẫu
+        setClassGroups(mapped);
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUser?.id]);
 
   const [scheduleMatrix, setScheduleMatrix] = useState<FreeScheduleMatrix>(
     () => {
@@ -520,7 +511,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [applicants, setApplicants] = useState<CandidateApplicant[]>([]);
 
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [milestoneSubmissions, setMilestoneSubmissions] = useState<MilestoneSubmission[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY + "_milestone_submissions");
@@ -545,6 +535,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       },
     ];
   });
+
+  // Tài khoản thật: bài nộp cột mốc lấy từ Firestore (giảng viên: mọi nhóm, sinh viên: nhóm mình)
+  useEffect(() => {
+    if (!auth.currentUser || !currentUser) return;
+    const ref = collection(db, "milestoneSubmissions");
+    if (currentRole !== "lecturer" && !currentUser.teamId) return;
+    const q = currentRole === "lecturer" ? ref : query(ref, where("groupId", "==", currentUser.teamId));
+    return onSnapshot(
+      q,
+      (snap) => setMilestoneSubmissions(snap.docs.map((d) => ({ ...(d.data() as MilestoneSubmission), id: d.id }))),
+      (error) => console.warn("Could not load submissions:", error),
+    );
+  }, [currentUser?.id, currentUser?.teamId, currentRole]);
 
   const [allowInternalMilestone, setAllowInternalMilestone] = useState(true);
 
@@ -594,9 +597,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   // Tài khoản thật: đề cương lấy từ Firestore
   useEffect(() => {
     if (!currentUser || !auth.currentUser) return;
-    getDoc(doc(db, "courses", "active"))
-      .then((snap) => setCourse(snap.exists() ? (snap.data() as CourseSyllabus) : null))
-      .catch((error) => console.warn("Could not load course:", error));
+    return onSnapshot(
+      doc(db, "courses", "active"),
+      (snap) => setCourse(snap.exists() ? (snap.data() as CourseSyllabus) : null),
+      (error) => console.warn("Could not load course:", error),
+    );
   }, [currentUser?.id]);
 
   const createCourse = (input: Omit<CourseSyllabus, "published">): boolean => {
@@ -1455,7 +1460,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const newSub: MilestoneSubmission = {
       ...submission,
-      id: `sub_${Date.now()}`,
+      // Mỗi nhóm một bài cho mỗi cột mốc: nộp lại thì ghi đè
+      id: `${submission.groupId}_${submission.milestoneId}`,
       submittedAt: formattedDate,
       status: "Đã nộp",
     };
@@ -1472,6 +1478,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       return updated;
     });
+
+    if (auth.currentUser) {
+      try {
+        await setDoc(doc(db, "milestoneSubmissions", newSub.id), newSub);
+      } catch (error) {
+        console.error("Error saving submission:", error);
+        showToast("Không lưu được bài nộp lên máy chủ.", "error");
+        return false;
+      }
+    }
 
     showToast(`Đã nộp bài tiến độ "${submission.title}" thành công!`, "success");
     addNotification({
@@ -1504,6 +1520,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         : s,
     );
     setMilestoneSubmissions(updated);
+    if (auth.currentUser) {
+      updateDoc(doc(db, "milestoneSubmissions", submissionId), {
+        status,
+        lecturerFeedback: feedback.trim(),
+      }).catch((error) => {
+        console.error("Error reviewing submission:", error);
+        showToast("Không lưu được kết quả kiểm duyệt lên máy chủ.", "error");
+      });
+    }
     try {
       localStorage.setItem(
         STORAGE_KEY + "_milestone_submissions",
@@ -1723,7 +1748,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    const milestoneId = "m2"; // For demo, fixed to milestone 2
+    const milestoneId = peerReviewMilestoneId;
 
     try {
       await peerReviewService.savePeerReview(
@@ -1760,7 +1785,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    const milestoneId = "m2"; // For demo, fixed to milestone 2
+    const milestoneId = peerReviewMilestoneId;
 
     try {
       await peerReviewService.savePeerReview(
@@ -1939,33 +1964,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const triggerPeerReview = async (
     milestoneId: string,
   ): Promise<{ success: boolean; message: string }> => {
-    if (!currentUser?.teamId) {
-      showToast("Không tìm thấy thông tin nhóm.", "warning");
-      return { success: false, message: "Không tìm thấy thông tin nhóm" };
-    }
+    // Giảng viên khóa cột mốc: mở phiên cho mọi nhóm; sinh viên: chỉ nhóm mình
+    const groupIds =
+      currentRole === "lecturer"
+        ? classGroups.map((g) => g.id)
+        : currentUser?.teamId
+          ? [currentUser.teamId]
+          : [];
 
     try {
-      // Get group members
-      const members = await groupService.getGroupMembers(currentUser.teamId);
-      const memberIds = members.map((m) => m.id);
-
-      if (memberIds.length < 2) {
-        showToast(
-          "Cần ít nhất 2 thành viên để khởi tạo đánh giá chéo.",
-          "warning",
+      let reviewCount = 0;
+      for (const groupId of groupIds) {
+        const members = await groupService.getGroupMembers(groupId);
+        if (members.length < 2) continue;
+        const r = await peerReviewService.initializePeerReviewSession(
+          groupId,
+          milestoneId,
+          members.map((m) => ({
+            id: m.id,
+            name: m.name,
+            role: m.isLeader ? "Trưởng nhóm" : "Thành viên",
+          })),
         );
-        return {
-          success: false,
-          message: "Cần ít nhất 2 thành viên để đánh giá chéo",
-        };
+        reviewCount += r.reviewCount;
       }
-
-      // Initialize peer review session
-      const result = await peerReviewService.initializePeerReviewSession(
-        currentUser.teamId,
-        milestoneId,
-        memberIds,
-      );
+      if (reviewCount === 0) {
+        showToast("Chưa có nhóm nào đủ 2 thành viên để mở đánh giá chéo.", "warning");
+        return { success: false, message: "Không có nhóm đủ thành viên" };
+      }
+      const result = {
+        success: true,
+        message: `Đã khởi tạo ${reviewCount} phiếu đánh giá chéo`,
+        reviewCount,
+      };
 
       if (result.success) {
         showToast(
