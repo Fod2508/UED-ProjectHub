@@ -9,6 +9,7 @@ import {
   checkIsTaskOverdue,
   getContributionStatus,
   markOverdueTasks,
+  buildContributionMembers,
 } from "./scoring.ts";
 
 test("markOverdueTasks moves late unfinished tasks to Quá hạn", () => {
@@ -158,4 +159,40 @@ test("checkIsTaskOverdue marks unfinished past tasks as overdue", () => {
   // Missing or malformed date -> NOT overdue
   assert.equal(checkIsTaskOverdue("", "Đang thực hiện", refDate), false);
   assert.equal(checkIsTaskOverdue("invalid", "Đang thực hiện", refDate), false);
+});
+
+test("buildContributionMembers computes completion, weighted peer score and warning", () => {
+  const members = [
+    { id: "a", name: "An", avatarText: "AN", isLeader: true },
+    { id: "b", name: "Bình", avatarText: "BI" },
+  ];
+  const tasks = [
+    { assigneeName: "An", status: "Hoàn thành" },
+    { assigneeName: "An", status: "Hoàn thành" },
+    { assigneeName: "Bình", status: "Hoàn thành" },
+    { assigneeName: "Bình", status: "Quá hạn" },
+    { assigneeName: "Bình", status: "Đang thực hiện" },
+    { assigneeName: "Bình", status: "Đã giao việc" },
+  ];
+  const reviews = [
+    { targetId: "a", status: "done", c1: 5, c2: 4, c3: 5, comment: "Chủ động" },
+    { targetId: "b", status: "done", c1: 2, c2: 2, c3: 2, comment: "" },
+    { targetId: "b", status: "pending", c1: 0, c2: 0, c3: 0 },
+  ];
+  const [an, binh] = buildContributionMembers(members, tasks, reviews, { c1: 40, c2: 35, c3: 25 });
+
+  // An: 2/2 việc = 100%; phiếu (5*40+4*35+5*25)/100 = 4.65 -> 4.7; 50 + 47 = 97
+  assert.equal(an.completionRate, 100);
+  assert.equal(an.peerScoreAvg, 4.7);
+  assert.equal(an.contributionScore, 97);
+  assert.equal(an.isWarning, false);
+  assert.equal(an.roleInTeam, "Trưởng nhóm");
+  assert.equal(an.anonymousComment, "Chủ động");
+
+  // Bình: 1/4 việc = 25%; chỉ tính phiếu đã gửi: 2.0; 12.5 + 20 = 32.5 -> cảnh báo
+  assert.equal(binh.completionRate, 25);
+  assert.equal(binh.peerScoreAvg, 2);
+  assert.equal(binh.contributionScore, 32.5);
+  assert.equal(binh.isWarning, true);
+  assert.equal(binh.hasOverdueTask, true);
 });

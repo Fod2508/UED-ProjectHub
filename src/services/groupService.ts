@@ -388,6 +388,7 @@ class GroupService {
             role: userData.role,
             skills: userData.skills || [],
             isLeader: memberId === group.createdBy,
+            studentId: userData.studentId || "",
           };
         }),
       );

@@ -1,3 +1,5 @@
+import type { MemberContributionData } from "../types/index.ts";
+
 /**
  * Thuật toán tính điểm và nghiệp vụ cốt lõi UD-DN ProjectHub
  */
@@ -173,4 +175,52 @@ export function getContributionStatus(
     color: "blue",
     isWarning: false,
   };
+}
+
+/**
+ * Giai đoạn 3 - Tổng hợp báo cáo đóng góp từ dữ liệu thật:
+ * tỷ lệ hoàn thành = việc "Hoàn thành" / việc được giao (theo tên người phụ trách),
+ * điểm chéo TB = trung bình các phiếu đã gửi, mỗi phiếu tính theo trọng số 3 tiêu chí.
+ */
+export function buildContributionMembers(
+  members: { id: string; name: string; studentId?: string; avatarText: string; isLeader?: boolean }[],
+  tasks: { assigneeName: string; status: string }[],
+  reviews: { targetId: string; status: string; c1: number; c2: number; c3: number; comment?: string }[],
+  weights: { c1: number; c2: number; c3: number },
+): MemberContributionData[] {
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+  const totalWeight = weights.c1 + weights.c2 + weights.c3 || 1;
+  return members.map((m) => {
+    const mine = tasks.filter((t) => t.assigneeName === m.name);
+    const completedTasks = mine.filter((t) => t.status === "Hoàn thành").length;
+    const completionRate = mine.length ? Math.round((completedTasks / mine.length) * 100) : 0;
+    const done = reviews.filter((r) => r.targetId === m.id && r.status === "done");
+    const avg = (pick: (r: (typeof done)[number]) => number) =>
+      done.length ? round1(done.reduce((sum, r) => sum + pick(r), 0) / done.length) : 0;
+    const peerScoreAvg = avg((r) => (r.c1 * weights.c1 + r.c2 * weights.c2 + r.c3 * weights.c3) / totalWeight);
+    const contributionScore = calculateContributionScore(completionRate, peerScoreAvg);
+    const { status, isWarning } = getContributionStatus(contributionScore, peerScoreAvg);
+    return {
+      id: m.id,
+      name: m.name,
+      studentId: m.studentId || "",
+      avatarText: m.avatarText,
+      roleInTeam: m.isLeader ? "Trưởng nhóm" : "Thành viên",
+      completedTasks,
+      totalTasks: mine.length,
+      completionRate,
+      hasOverdueTask: mine.some((t) => t.status === "Quá hạn"),
+      peerScoreAvg,
+      contributionScore,
+      status,
+      isWarning,
+      warningReason: isWarning
+        ? done.length
+          ? `Điểm đóng góp ${contributionScore}% và điểm đánh giá chéo ${peerScoreAvg}/5`
+          : "Chưa nhận được phiếu đánh giá chéo nào"
+        : undefined,
+      criteriaScores: done.length ? { c1: avg((r) => r.c1), c2: avg((r) => r.c2), c3: avg((r) => r.c3) } : undefined,
+      anonymousComment: done.map((r) => r.comment?.trim()).find(Boolean),
+    };
+  });
 }

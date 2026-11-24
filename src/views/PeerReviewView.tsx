@@ -36,6 +36,7 @@ export const PeerReviewView: React.FC = () => {
     extendEvaluationDeadline,
     addNotification,
     classGroups,
+    lecturerPeerReviews,
   } = useApp();
 
   const currentEvaluation = peerReviews.find(
@@ -141,7 +142,27 @@ export const PeerReviewView: React.FC = () => {
   // LECTURER VIEW: GIÁM SÁT & QUẢN LÝ PHIÊN ĐÁNH GIÁ CHÉO
   // ==========================================
   if (currentRole === "lecturer") {
-    const reviewStatsByGroup = [
+    // Tài khoản thật: tiến độ nộp phiếu tính từ Firestore
+    const realStats = lecturerPeerReviews
+      ? classGroups.map((g) => {
+          const list = lecturerPeerReviews.filter((r: any) => r.groupId === g.id);
+          const done = list.filter((r) => r.status === "done").length;
+          return {
+            id: g.id,
+            name: `${g.name} - ${g.topic}`,
+            leader: g.leaderName,
+            submitted: done,
+            total: list.length,
+            status: !list.length
+              ? "Chưa mở phiên"
+              : done === list.length
+                ? "Hoàn tất 100%"
+                : `Đang thực hiện (${Math.round((done / list.length) * 100)}%)`,
+            missing: undefined as string | undefined,
+          };
+        })
+      : null;
+    const demoStats = [
       { id: "nhom_01", name: "Nhóm 01 - Thư viện Số", leader: "Phạm Minh Hoàng", submitted: 4, total: 4, status: "Hoàn tất 100%" },
       { id: "nhom_02", name: "Nhóm 02 - E-Learning", leader: "Vũ Thị Mai", submitted: 4, total: 4, status: "Hoàn tất 100%" },
       { id: "nhom_03", name: "Nhóm 03 - AI Điểm danh", leader: "Lê Tuấn Anh", submitted: 2, total: 3, status: "Đang thực hiện (67%)", missing: "Bùi Trọng Tín" },
@@ -149,6 +170,7 @@ export const PeerReviewView: React.FC = () => {
       { id: "nhom_05", name: "Nhóm 05 - Chatbot Tuyển sinh", leader: "Đặng Quốc Bảo", submitted: 3, total: 3, status: "Hoàn tất 100%" },
       { id: "nhom_06", name: "Nhóm 06 - Mạng Xã hội NCKH", leader: "Hoàng Lan Chi", submitted: 4, total: 4, status: "Hoàn tất 100%" },
     ];
+    const reviewStatsByGroup = realStats ?? demoStats;
 
     return (
       <div className="max-w-6xl mx-auto space-y-6 pb-12">
@@ -229,7 +251,10 @@ export const PeerReviewView: React.FC = () => {
               Nhóm đã nộp đủ 100%
             </span>
             <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">
-              4 / 6 nhóm
+              {realStats
+                ? `${realStats.filter((g) => g.total > 0 && g.submitted === g.total).length} / ${realStats.length}`
+                : "4 / 6"}{" "}
+              nhóm
             </div>
             <p className="text-xs text-slate-500 mt-1">Sẵn sàng nghiệm thu dữ liệu</p>
           </div>
@@ -313,7 +338,7 @@ export const PeerReviewView: React.FC = () => {
                           <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full ${isDone ? "bg-emerald-500" : "bg-amber-500"}`}
-                              style={{ width: `${(item.submitted / item.total) * 100}%` }}
+                              style={{ width: `${item.total ? (item.submitted / item.total) * 100 : 0}%` }}
                             />
                           </div>
                         </div>

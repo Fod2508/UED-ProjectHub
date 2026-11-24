@@ -51,6 +51,7 @@ import {
   calculateMatchScore,
   isTeamRecommended,
   markOverdueTasks,
+  buildContributionMembers,
 } from "../utils/scoring.ts";
 
 const STORAGE_KEY = "ud_dn_projecthub_state_v2";
@@ -127,6 +128,9 @@ interface AppContextType {
   publishMilestones: () => { success: boolean; message: string };
   isMilestoneLocked: boolean;
   course: CourseSyllabus | null;
+  lecturerPeerReviews: PeerReviewEntry[] | null;
+  reportGroupId: string | null;
+  setReportGroupId: (id: string) => void;
   createCourse: (input: Omit<CourseSyllabus, "published">) => boolean;
 
   // Peer review (Giai đoạn 3)
@@ -626,6 +630,110 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const isReportApproved = groupReport.status === "Đã phê duyệt";
 
+  // ===== Tài khoản thật: báo cáo đóng góp và phiên đánh giá chéo lấy từ Firestore =====
+  // Giảng viên: mọi phiếu của cột mốc đang đánh giá (null ở chế độ mẫu)
+  const [lecturerPeerReviews, setLecturerPeerReviews] = useState<PeerReviewEntry[] | null>(null);
+  useEffect(() => {
+    if (!auth.currentUser || currentRole !== "lecturer") {
+      setLecturerPeerReviews(null);
+      return;
+    }
+    return onSnapshot(
+      query(collection(db, "peerReviews"), where("milestoneId", "==", peerReviewMilestoneId)),
+      (snap) => setLecturerPeerReviews(snap.docs.map((d) => ({ ...(d.data() as PeerReviewEntry), id: d.id }))),
+      (error) => console.warn("Could not load peer reviews:", error),
+    );
+  }, [currentUser?.id, currentRole, peerReviewMilestoneId]);
+
+  // Nhóm giảng viên đang xem báo cáo (mặc định nhóm đầu tiên)
+  const [reportGroupId, setReportGroupId] = useState<string | null>(null);
+  const activeReportGroupId =
+    auth.currentUser && currentRole === "lecturer" ? reportGroupId ?? classGroups[0]?.id ?? null : null;
+  const [reportSource, setReportSource] = useState<{
+    groupId: string;
+    members: Awaited<ReturnType<typeof groupService.getGroupMembers>>;
+    tasks: KanbanTask[];
+  } | null>(null);
+  useEffect(() => {
+    if (!activeReportGroupId) return;
+    let cancelled = false;
+    Promise.all([
+      groupService.getGroupMembers(activeReportGroupId),
+      taskService.getGroupTasks(activeReportGroupId),
+    ])
+      .then(([members, groupTasks]) => {
+        if (!cancelled) setReportSource({ groupId: activeReportGroupId, members, tasks: markOverdueTasks(groupTasks) as KanbanTask[] });
+      })
+      .catch((error) => console.warn("Could not load report data:", error));
+    return () => {
+      cancelled = true;
+    };
+  }, [activeReportGroupId]);
+
+  // Báo cáo đã lưu (giải trình / đánh giá lại / đã phê duyệt) của nhóm đang xem hoặc nhóm của sinh viên
+  const reportDocGroupId = activeReportGroupId ?? (auth.currentUser && currentRole === "student" ? currentUser?.teamId ?? null : null);
+  const [reportDoc, setReportDoc] = useState<Partial<GroupReportData> | null>(null);
+  useEffect(() => {
+    setReportDoc(null);
+    if (!reportDocGroupId) return;
+    return onSnapshot(
+      doc(db, "contributionReports", `${reportDocGroupId}_${peerReviewMilestoneId}`),
+      (snap) => setReportDoc(snap.exists() ? (snap.data() as Partial<GroupReportData>) : null),
+      (error) => console.warn("Could not load contribution report:", error),
+    );
+  }, [reportDocGroupId, peerReviewMilestoneId]);
+
+  // Ghép thành groupReport để các màn hiện có dùng lại
+  useEffect(() => {
+    // Tài khoản thật chưa có nhóm nào: báo cáo trống thay vì số liệu mẫu
+    if (!auth.currentUser) return;
+    const group = classGroups.find((g) => g.id === reportDocGroupId);
+    const milestone = milestones.find((m) => m.id === peerReviewMilestoneId);
+    const isLocked = reportDoc?.status === "Đã phê duyệt";
+    let members: MemberContributionData[] = reportDoc?.members ?? [];
+    if (currentRole === "lecturer" && !isLocked && reportSource?.groupId === reportDocGroupId) {
+      members = buildContributionMembers(
+        reportSource.members,
+        reportSource.tasks,
+        (lecturerPeerReviews ?? []).filter((r: any) => r.groupId === reportDocGroupId),
+        criteriaWeights,
+      );
+    }
+    const reviewsOfGroup = (lecturerPeerReviews ?? []).filter((r: any) => r.groupId === reportDocGroupId);
+    setGroupReport({
+      groupId: reportDocGroupId ?? "",
+      groupName: group?.name ?? "Nhóm",
+      projectTopic: group?.topic ?? "",
+      membersCount: group?.memberCount ?? members.length,
+      membersMax: group?.maxMembers ?? 4,
+      milestoneId: peerReviewMilestoneId,
+      milestoneName: milestone?.name ?? "",
+      submissionProgress: "",
+      peerReviewProgress: reviewsOfGroup.length
+        ? `${Math.round((reviewsOfGroup.filter((r) => r.status === "done").length / reviewsOfGroup.length) * 100)}% hoàn thành`
+        : "Chưa mở phiên",
+      warningCount: members.filter((m) => m.isWarning).length,
+      status: (reportDoc?.status as GroupReportData["status"]) ?? "Chờ giảng viên phê duyệt",
+      lecturerInstruction: reportDoc?.lecturerInstruction ?? "",
+      members,
+      officialScores: reportDoc?.officialScores,
+      approvedAt: reportDoc?.approvedAt,
+    });
+  }, [reportDocGroupId, reportSource, reportDoc, lecturerPeerReviews, criteriaWeights, classGroups, milestones, peerReviewMilestoneId, currentRole]);
+
+  // Lưu trạng thái báo cáo của tài khoản thật lên Firestore
+  const saveReportDoc = (data: Partial<GroupReportData>) => {
+    if (!auth.currentUser) return;
+    setDoc(
+      doc(db, "contributionReports", `${groupReport.groupId}_${groupReport.milestoneId}`),
+      { groupId: groupReport.groupId, milestoneId: groupReport.milestoneId, members: groupReport.members, ...data },
+      { merge: true },
+    ).catch((error) => {
+      console.error("Error saving contribution report:", error);
+      showToast("Không lưu được báo cáo đóng góp lên máy chủ.", "error");
+    });
+  };
+
   // Modals
   const [isApplicantModalOpen, setIsApplicantModalOpen] = useState(false);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
@@ -715,10 +823,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         STORAGE_KEY + "_schedule",
         JSON.stringify(scheduleMatrix),
       );
-      localStorage.setItem(
-        STORAGE_KEY + "_group_report",
-        JSON.stringify(groupReport),
-      );
+      if (!auth.currentUser) {
+        localStorage.setItem(
+          STORAGE_KEY + "_group_report",
+          JSON.stringify(groupReport),
+        );
+      }
     } catch {
       // ignore
     }
@@ -1649,6 +1759,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       // Realtime listener will update UI automatically
     } catch (error) {
       console.error("Error creating milestone:", error);
+      // Tài khoản thật: báo lỗi thay vì thêm tạm trên máy (sẽ mất khi đồng bộ)
+      if (auth.currentUser) {
+        showToast("Không lưu được cột mốc lên máy chủ.", "error");
+        return;
+      }
       // Fallback local state update
       const newMilestone: Milestone = {
         ...item,
@@ -1666,6 +1781,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       // Realtime listener will update UI automatically
     } catch (error) {
       console.error("Error updating milestone:", error);
+      if (auth.currentUser) {
+        showToast("Không lưu được thay đổi cột mốc lên máy chủ.", "error");
+        return;
+      }
       // Fallback local state update
       setMilestones((prev) =>
         prev.map((m) => (m.id === id ? { ...m, ...updates } : m)),
@@ -1875,19 +1994,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       officialScores,
       approvedAt,
     }));
-    if (auth.currentUser) {
-      setDoc(doc(db, "contributionReports", `${groupReport.groupId}_${groupReport.milestoneId}`), {
-        groupId: groupReport.groupId,
-        milestoneId: groupReport.milestoneId,
-        status: "Đã phê duyệt",
-        officialScores,
-        approvedAt,
-        approvedBy: currentUser?.id || "",
-      }).catch((error) => {
-        console.error("Error saving official scores:", error);
-        showToast("Không lưu được điểm chính thức lên máy chủ.", "error");
-      });
-    }
+    saveReportDoc({ status: "Đã phê duyệt", officialScores, approvedAt, approvedBy: currentUser?.id || "" } as Partial<GroupReportData>);
     showToast(
       "Đã phê duyệt và khóa toàn bộ điểm số Cột mốc 2 cho Nhóm 04.",
       "success",
@@ -1911,6 +2018,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       status: "Yêu cầu giải trình",
       lecturerInstruction: instruction,
     }));
+    saveReportDoc({ status: "Yêu cầu giải trình", lecturerInstruction: instruction });
     showToast(
       "Đã gửi thông báo yêu cầu Trưởng nhóm và thành viên nộp bản giải trình.",
       "warning",
@@ -1934,6 +2042,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       status: "Yêu cầu đánh giá lại",
       lecturerInstruction: instruction,
     }));
+    saveReportDoc({ status: "Yêu cầu đánh giá lại", lecturerInstruction: instruction });
     showToast(
       "Đã gửi thông báo yêu cầu Nhóm 04 thực hiện đánh giá chéo lại.",
       "info",
@@ -2102,6 +2211,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         isMilestoneLocked: Boolean(course?.published),
         course,
         createCourse,
+        lecturerPeerReviews,
+        reportGroupId: activeReportGroupId,
+        setReportGroupId,
         peerReviews,
         activeEvaluatingTargetId,
         setActiveEvaluatingTargetId,

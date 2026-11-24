@@ -104,8 +104,18 @@ service cloud.firestore {
       // Read: All authenticated users (course-wide)
       allow read: if isAuthenticated();
       
-      // Write: Only lecturers can manage milestones
-      allow create, update, delete: if isLecturer();
+      // Write: lecturers manage course milestones;
+      // a group leader manages the internal milestones of their own group (UC14)
+      allow create: if isLecturer() || (
+        isGroupLeader() &&
+        request.resource.data.type == 'internal' &&
+        isSameTeam(request.resource.data.teamId)
+      );
+      allow update, delete: if isLecturer() || (
+        isGroupLeader() &&
+        resource.data.type == 'internal' &&
+        isSameTeam(resource.data.teamId)
+      );
     }
     
     // ============================================

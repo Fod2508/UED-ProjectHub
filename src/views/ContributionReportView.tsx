@@ -20,6 +20,11 @@ import { EvaluationDetailModal } from "../components/EvaluationDetailModal.tsx";
 export const ContributionReportView: React.FC = () => {
   const {
     groupReport,
+    reportGroupId,
+    setReportGroupId,
+    lecturerPeerReviews,
+    milestoneSubmissions,
+    classGroups,
     setLecturerInstruction,
     approveAllScores,
     requestExplanation,
@@ -60,6 +65,15 @@ export const ContributionReportView: React.FC = () => {
       m.name.toLowerCase() === currentUser?.name?.toLowerCase() ||
       (currentUser?.code && m.studentId === currentUser.code),
   );
+
+  // Số liệu thật cho giảng viên (tài khoản thật)
+  const submittedGroups = new Set(
+    milestoneSubmissions.filter((sub) => sub.milestoneId === groupReport.milestoneId).map((sub) => sub.groupId),
+  ).size;
+  const submittedPct = classGroups.length ? Math.round((submittedGroups / classGroups.length) * 100) : 0;
+  const reviewPct = lecturerPeerReviews?.length
+    ? Math.round((lecturerPeerReviews.filter((r) => r.status === "done").length / lecturerPeerReviews.length) * 100)
+    : 0;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12">
@@ -391,7 +405,7 @@ export const ContributionReportView: React.FC = () => {
                     Tổng số nhóm đồ án
                   </span>
                   <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 tabular-nums">
-                    12 nhóm
+                    {reportGroupId ? classGroups.length : 12} nhóm
                   </div>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -402,8 +416,8 @@ export const ContributionReportView: React.FC = () => {
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>
                   Tiến độ nộp bài:{" "}
-                  <strong className="text-slate-800 font-bold">100%</strong>{" "}
-                  (12/12 nhóm đã nộp)
+                  <strong className="text-slate-800 font-bold">{reportGroupId ? `${submittedPct}%` : "100%"}</strong>{" "}
+                  ({reportGroupId ? `${submittedGroups}/${classGroups.length}` : "12/12"} nhóm đã nộp)
                 </span>
               </div>
             </div>
@@ -416,7 +430,7 @@ export const ContributionReportView: React.FC = () => {
                     Tiến độ đánh giá chéo
                   </span>
                   <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
-                    100% hoàn thành
+                    {reportGroupId ? `${reviewPct}% hoàn thành` : "100% hoàn thành"}
                   </div>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -464,7 +478,21 @@ export const ContributionReportView: React.FC = () => {
               {/* Dropdown for groups */}
               <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-800">
                 <Users className="w-4 h-4 text-blue-600" />
-                <span>Nhóm 04 - Hệ thống Quản lý Đồ án (Đang xem)</span>
+                {reportGroupId ? (
+                  <select
+                    value={reportGroupId}
+                    onChange={(e) => setReportGroupId(e.target.value)}
+                    className="bg-transparent outline-none cursor-pointer"
+                  >
+                    {classGroups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name} - {g.topic}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span>Nhóm 04 - Hệ thống Quản lý Đồ án (Đang xem)</span>
+                )}
                 <ChevronDown className="w-4 h-4 text-slate-500" />
               </div>
 
